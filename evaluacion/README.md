@@ -1,43 +1,68 @@
-# evaluacion/ — pendiente
+# evaluacion/
 
-Módulo de medición. Todavía no implementado.
+Compara las predicciones del extractor contra el ground truth del generador.
 
-## Qué debe medir
+```bash
+python -m evaluacion
+python -m evaluacion --json salidas/metricas.json --etiqueta "texto nativo"
+```
 
-Comparar lo que devuelve `extractor/` contra el ground truth que produce
-`generador/`, campo por campo, sobre los campos de
-[`esquema_contrato.py`](../esquema_contrato.py).
+## Tres desenlaces, no dos
 
-Métricas mínimas:
+Cada campo de cada documento cae en una de tres categorías:
 
-- **Exactitud por campo** — porcentaje de documentos en que el campo se extrajo
-  idéntico al valor canónico. Es la métrica principal: los 15 campos no tienen
-  la misma dificultad y un promedio global la esconde.
-- **Exactitud de documento completo** — porcentaje de contratos con los 15 campos
-  correctos. Es la métrica que importa si la salida se usa sin revisión humana.
-- **Tasa de omisión vs. tasa de error** — separar "no encontró el campo" de
-  "encontró un valor equivocado". El segundo caso es mucho más costoso: un campo
-  vacío se detecta a simple vista, uno incorrecto no.
+- **correcto** — coincide con el valor canónico
+- **omitido** — el extractor no devolvió nada
+- **incorrecto** — devolvió algo distinto
 
-## Desgloses que el ground truth ya permite
+La distinción entre los dos últimos es el punto. Un campo vacío y un campo con un
+valor equivocado no cuestan lo mismo: el vacío salta a la vista en cualquier
+revisión, el incorrecto se cuela hasta la planilla final sin que nadie lo note.
+Contarlos juntos esconde justamente lo que hay que vigilar.
 
-Cada registro guarda `plantilla`, `perfil_escaneo` y `formatos_usados`, así que
-la evaluación puede cortar los resultados por:
+A los campos incorrectos se les calcula además la **similitud de caracteres**.
+Solo es informativa cuando algo falla, y sirve para separar un error de una letra
+—típico del OCR— de una lectura completamente equivocada, como haber tomado los
+datos de la otra parte del contrato.
 
-- layout (`formal` / `tabular` / `compacta`),
-- calidad del escaneo (`limpio` / `medio` / `degradado`),
-- formato de fecha, de monto y de patente,
-- etiqueta usada para el RUT de la persona natural.
+## Métricas
 
-Ese desglose es el que indica dónde vale la pena trabajar: si `fecha_inicio` solo
-falla en la plantilla formal, el problema es el parseo de fechas en palabras, no
-el OCR.
+**Exactitud por campo.** La vista principal. Los quince campos no tienen la misma
+dificultad y un promedio global esconde que, por ejemplo, todo funcione salvo la
+fecha de término.
 
-## Confusión a vigilar explícitamente
+**Exactitud por documento.** Proporción de contratos con los quince campos
+correctos. Es la métrica que importa si la salida se usa sin revisión humana: un
+solo campo malo invalida la fila completa. Siempre es más baja que la anterior, y
+la diferencia entre ambas dice cuán concentrados están los errores.
 
-Todos los contratos incluyen a la arrendadora fija (`Flota Meridiano SpA`, RUT
-`99.000.001-8`, representante `Andrés Vergara Solís`, RUT `50.000.001-5`), cuyos
-datos **no** forman parte del ground truth. Conviene reportar aparte cuántas
-veces el extractor devolvió los datos de la arrendadora en lugar de los del
-arrendatario: es un error distinto de "extrajo cualquier cosa" y tiene una causa
-distinta.
+**Confusión con la propia arrendadora.** Cuántas veces se extrajeron los datos de
+`Flota Meridiano SpA` en vez de los del arrendatario. Es un error de naturaleza
+distinta a "leyó cualquier cosa": significa que el extractor identificó bien el
+campo pero se equivocó de parte del contrato. Su causa y su arreglo son otros, así
+que se cuenta aparte.
+
+## Desgloses
+
+Cada registro del ground truth guarda `plantilla`, `perfil_escaneo` y
+`formatos_usados`, así que los resultados se pueden cortar por layout y por
+calidad de escaneo. Ese corte es el que indica dónde trabajar: si `fecha_inicio`
+solo falla en la plantilla formal, el problema es el parseo de fechas escritas en
+palabras y no el OCR.
+
+El informe termina con los peores campos y **ejemplos concretos** de cada fallo,
+con el valor esperado y el obtenido lado a lado. En la práctica esos tres
+ejemplos suelen bastar para ver la causa sin abrir un solo PDF.
+
+## Un documento sin predicción cuenta como fallo
+
+Si el extractor no procesó un documento, sus quince campos se cuentan como
+omitidos y el informe lo avisa. No se descarta del promedio: un documento que ni
+siquiera se pudo abrir es un fallo del sistema, no una fila que se pueda excluir
+para que el número quede mejor.
+
+## Salida en JSON
+
+Con `--json` guarda todas las métricas más el detalle campo a campo. Sirve para
+comparar corridas entre sí, que es como se ve si un cambio en el extractor mejoró
+o solo movió los errores de lugar.

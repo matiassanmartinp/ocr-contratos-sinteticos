@@ -8,9 +8,31 @@ sintético, de modo que cualquiera pueda clonarlo, reproducir el dataset complet
 con una semilla y evaluar un extractor sin que exista un solo documento real de
 por medio.
 
-> **Estado:** el generador está terminado. El extractor y el módulo de evaluación
-> están pendientes; sus carpetas contienen el contrato de interfaz que deben
-> cumplir.
+> **Estado:** generador, evaluación y extractor sobre texto nativo, terminados y
+> medidos. Falta la vía OCR para documentos escaneados.
+
+## Resultado actual
+
+| Entrada | Exactitud por campo | Documentos perfectos |
+|---|---|---|
+| Texto nativo del PDF | **100,0%** | **100,0%** |
+| Escaneo limpio | pendiente | |
+| Escaneo medio | pendiente | |
+| Escaneo degradado | pendiente | |
+
+Medido sobre 200 contratos generados con una semilla distinta de la usada para
+escribir los patrones: 3.000 campos, cero errores, cero omisiones y cero
+confusiones con la contraparte.
+
+Ese 100% es el **techo de la lógica de parseo**, no el rendimiento del sistema
+completo. Separar las dos cosas es deliberado: midiendo primero sobre texto limpio
+se sabe cuánto cuesta el OCR, y por lo tanto si conviene invertir en mejorar los
+patrones o en mejorar la calidad del escaneo. Es la pregunta que de verdad importa
+cuando el proceso corre sobre documentos reales.
+
+```bash
+python -m generador --cantidad 200 --semilla 777 --solo-pdf && python -m extractor && python -m evaluacion
+```
 
 ---
 
@@ -138,10 +160,25 @@ Definición y forma canónica de cada uno en
 ```
 configuracion.py      Todos los parámetros ajustables, en un solo lugar
 esquema_contrato.py   Definición de los 15 campos y su forma canónica
+formato_chileno.py    RUT con dígito verificador y patente, compartidos
 generador/            Datos sintéticos, plantillas, render PDF, escaneo, ground truth
-extractor/            Pendiente — contrato de interfaz en su README
-evaluacion/           Pendiente — métricas propuestas en su README
+extractor/            Lectura del PDF, patrones por campo, normalización canónica
+evaluacion/           Comparación contra ground truth y métricas
 tests/                Pruebas con pytest
+```
+
+El flujo completo son tres comandos encadenables:
+
+```bash
+python -m generador --cantidad 50 --semilla 42 --solo-pdf
+```
+
+```bash
+python -m extractor
+```
+
+```bash
+python -m evaluacion --etiqueta "texto nativo"
 ```
 
 ## Pruebas

@@ -182,7 +182,55 @@ EXTENSION_ESCANEO = ".jpg"
 
 
 # =============================================================================
-# 9. CATALOGOS DE VOCABULARIO (inventados)
+# 9. EXTRACTOR
+# =============================================================================
+
+# Datos de la propia arrendadora. El extractor los descarta cuando aparecen como
+# candidatos: en un contrato conviven las dos partes y la que interesa es siempre
+# la contraparte. Conocer los datos propios es legitimo y es exactamente lo que
+# hace un extractor de produccion.
+def _valores_propios() -> dict:
+    return {
+        "rut_empresa": ARRENDADOR_RUT,
+        "rut_representante": ARRENDADOR_RUT_REPRESENTANTE,
+        "razon_social": ARRENDADOR_RAZON_SOCIAL,
+        "nombre_representante": ARRENDADOR_REPRESENTANTE,
+        "giro": ARRENDADOR_GIRO,
+        "domicilio": ARRENDADOR_DOMICILIO,
+    }
+
+
+VALORES_PROPIOS = _valores_propios()
+
+#: Metodos de obtencion de texto que el extractor sabe usar.
+METODO_TEXTO_NATIVO = "texto_nativo"
+METODO_OCR = "ocr"
+
+#: Minimo de caracteres para considerar que un PDF trae texto embebido util.
+#: Por debajo de este umbral el documento se trata como escaneado.
+MINIMO_CARACTERES_TEXTO_NATIVO = 200
+
+NOMBRE_ARCHIVO_PREDICCIONES = "predicciones.jsonl"
+
+
+# =============================================================================
+# 10. EVALUACION
+# =============================================================================
+
+#: Campos cuyo valor es texto libre. Se comparan tras normalizar espacios, y
+#: ademas se les calcula similitud de caracteres, que es lo informativo cuando
+#: el texto viene de OCR y difiere en una letra.
+CAMPOS_TEXTO_LIBRE = (
+    "razon_social", "giro", "domicilio", "nombre_representante",
+    "marca", "modelo",
+)
+
+#: Dimensiones del ground truth por las que se puede desglosar el resultado.
+DIMENSIONES_DESGLOSE = ("plantilla", "perfil_escaneo")
+
+
+# =============================================================================
+# 11. CATALOGOS DE VOCABULARIO (inventados)
 # =============================================================================
 
 # Los acentos y la letra enie son intencionales: los contratos reales los llevan

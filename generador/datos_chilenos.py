@@ -4,72 +4,33 @@ Cubre RUT con digito verificador correcto, patente en formato nacional moderno y
 el resto de los campos del contrato. Todas las funciones reciben una instancia de
 ``random.Random`` en lugar de usar el modulo global: asi el lote completo queda
 determinado por una sola semilla y es reproducible byte a byte.
+
+Las primitivas de RUT y patente viven en ``formato_chileno`` y se reexportan aqui
+por comodidad, porque el extractor tambien las necesita.
 """
 
 from __future__ import annotations
 
 import calendar
-import re
 from datetime import date, timedelta
 from random import Random
 
 import configuracion as cfg
 from esquema_contrato import ContratoSintetico
-
-# Factores del algoritmo modulo 11 usado por el Servicio de Impuestos Internos.
-_FACTORES_MODULO_11 = (2, 3, 4, 5, 6, 7)
-
-_PATRON_PPU_NUEVA = re.compile(r"^[A-Z]{4}\d{2}$")
+from formato_chileno import (  # noqa: F401  (reexportadas a proposito)
+    calcular_digito_verificador,
+    canonizar_patente,
+    canonizar_rut,
+    formatear_rut,
+    normalizar_rut,
+    patente_es_valida,
+    rut_es_valido,
+)
 
 
 # =============================================================================
 # RUT
 # =============================================================================
-
-def calcular_digito_verificador(cuerpo: int | str) -> str:
-    """Calcula el digito verificador de un RUT mediante el algoritmo modulo 11.
-
-    Recorre los digitos del cuerpo de derecha a izquierda multiplicandolos por la
-    serie ciclica 2,3,4,5,6,7 y acumula. El digito es ``11 - (suma % 11)``, con
-    dos casos especiales: 11 se representa como ``"0"`` y 10 como ``"K"``.
-    """
-    digitos = re.sub(r"[^0-9]", "", str(cuerpo))
-    if not digitos:
-        raise ValueError("El cuerpo del RUT no contiene digitos.")
-
-    acumulado = 0
-    for posicion, digito in enumerate(reversed(digitos)):
-        acumulado += int(digito) * _FACTORES_MODULO_11[posicion % len(_FACTORES_MODULO_11)]
-
-    resto = 11 - (acumulado % 11)
-    if resto == 11:
-        return "0"
-    if resto == 10:
-        return "K"
-    return str(resto)
-
-
-def formatear_rut(cuerpo: int | str, digito_verificador: str) -> str:
-    """Arma un RUT legible con separador de miles y guion: ``99.123.456-7``."""
-    return f"{int(cuerpo):,}".replace(",", ".") + f"-{digito_verificador}"
-
-
-def normalizar_rut(rut: str) -> str:
-    """Deja un RUT en la forma compacta ``99123456-7`` (sin puntos, en mayuscula)."""
-    limpio = re.sub(r"[^0-9Kk\-]", "", (rut or "")).upper()
-    return limpio.strip("-")
-
-
-def rut_es_valido(rut: str) -> bool:
-    """Indica si el digito verificador del RUT coincide con el que corresponde."""
-    normalizado = normalizar_rut(rut)
-    if "-" not in normalizado:
-        return False
-    cuerpo, digito = normalizado.rsplit("-", 1)
-    if not cuerpo.isdigit() or not digito:
-        return False
-    return calcular_digito_verificador(cuerpo) == digito
-
 
 def generar_rut(aleatorio: Random, rango: tuple[int, int]) -> str:
     """Genera un RUT formateado y valido dentro del rango de cuerpos indicado."""
@@ -98,11 +59,6 @@ def generar_patente(aleatorio: Random) -> str:
         for _ in range(cfg.LARGO_DIGITOS_PATENTE)
     )
     return letras + digitos
-
-
-def patente_es_valida(ppu: str) -> bool:
-    """Verifica que la patente tenga la forma canonica de cuatro letras y dos digitos."""
-    return bool(_PATRON_PPU_NUEVA.fullmatch(ppu or ""))
 
 
 # =============================================================================
