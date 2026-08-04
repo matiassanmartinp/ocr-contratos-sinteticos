@@ -1,0 +1,68 @@
+# =============================================================================
+# 1. ARTEFACTOS GENERADOS
+# -----------------------------------------------------------------------------
+# El dataset NO se versiona: es reproducible byte a byte con una semilla.
+#     python -m generador --cantidad 50 --semilla 42
+#
+# El arbol salidas/ tampoco se versiona ni siquiera vacio: el generador crea sus
+# subdirectorios con mkdir(parents=True) en cuanto los necesita.
+# =============================================================================
+salidas/
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.tiff
+*.csv
+*.xlsx
+*.xls
+
+# =============================================================================
+# 2. DOCUMENTOS REALES — NUNCA VERSIONAR
+# -----------------------------------------------------------------------------
+# Este repositorio es 100% sintetico por diseno. Ningun contrato real, ninguna
+# salida de produccion y ningun caso de prueba real debe entrar aqui.
+# Estas reglas son una red de seguridad ante una copia accidental.
+# =============================================================================
+documentos_reales/
+contratos_reales/
+datos_locales/
+sharepoint/
+onedrive/
+*_real.*
+*_produccion.*
+*.json.real
+
+# =============================================================================
+# 3. PYTHON
+# =============================================================================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.env
+
+# =============================================================================
+# 4. OTROS ENTORNOS QUE DEJAN RESIDUOS EN LA CARPETA
+# =============================================================================
+.Rhistory
+.Rdata
+.RData
+.Rproj.user/
+
+# =============================================================================
+# 5. SISTEMA OPERATIVO Y EDITORES
+# =============================================================================
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+.idea/

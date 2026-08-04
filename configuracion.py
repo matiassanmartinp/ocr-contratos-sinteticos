@@ -1,0 +1,266 @@
+"""Parametros centralizados del proyecto.
+
+Toda constante ajustable del generador vive aqui: rutas, semilla, rangos de los
+valores sinteticos, catalogos de vocabulario y perfiles de degradacion del
+escaneo. Ningun otro modulo define literales de configuracion propios.
+
+AVISO DE PRIVACIDAD
+-------------------
+Los catalogos de este archivo son inventados. No corresponden a empresas,
+personas, marcas de vehiculo ni domicilios reales. Ver README.md.
+"""
+
+from pathlib import Path
+
+# =============================================================================
+# 1. RUTAS
+# =============================================================================
+
+DIRECTORIO_RAIZ = Path(__file__).resolve().parent
+DIRECTORIO_SALIDAS = DIRECTORIO_RAIZ / "salidas"
+
+SUBDIRECTORIO_PDF = "pdf"
+SUBDIRECTORIO_ESCANEOS = "escaneos"
+SUBDIRECTORIO_GROUND_TRUTH = "ground_truth"
+
+NOMBRE_MANIFIESTO = "manifiesto.jsonl"
+
+
+# =============================================================================
+# 2. EJECUCION
+# =============================================================================
+
+SEMILLA_POR_DEFECTO = 42
+CANTIDAD_POR_DEFECTO = 10
+
+# Prefijo y ancho del identificador de documento: SINT-0001, SINT-0002, ...
+PREFIJO_ID_DOCUMENTO = "SINT"
+ANCHO_ID_DOCUMENTO = 4
+
+
+# =============================================================================
+# 3. RANGOS DE RUT
+# =============================================================================
+# Se usan deliberadamente tramos NO asignados por el Servicio de Impuestos
+# Internos. El formato y el digito verificador son identicos a los reales, pero
+# la probabilidad de colisionar con un RUT existente es nula. Si en algun
+# momento se necesita realismo estadistico (por ejemplo empresas en 76.xxx.xxx),
+# basta cambiar estos dos rangos.
+
+RANGO_RUT_EMPRESA = (99_000_000, 99_999_999)
+RANGO_RUT_PERSONA = (50_000_000, 59_999_999)
+
+
+# =============================================================================
+# 4. PATENTE VEHICULAR
+# =============================================================================
+# Formato chileno moderno: cuatro letras y dos digitos (LLLL-NN). El registro
+# nacional excluye las vocales y algunas consonantes ambiguas.
+
+LETRAS_PATENTE = "BCDFGHJKLPRSTVWXYZ"
+LARGO_LETRAS_PATENTE = 4
+LARGO_DIGITOS_PATENTE = 2
+
+# El registro chileno asigna las patentes en orden alfabetico correlativo, asi que
+# los prefijos del final del abecedario todavia no estan emitidos. Restringir la
+# primera letra a ese tramo garantiza que una patente sintetica no pueda coincidir
+# con la de un vehiculo en circulacion, sin perder el formato ni el realismo.
+# Mismo criterio que los tramos de RUT no asignados de la seccion 3.
+# Deja 3 x 18^3 x 100 = 1.749.600 combinaciones posibles.
+LETRAS_INICIALES_PATENTE = "XYZ"
+
+
+# =============================================================================
+# 5. RANGOS DE LOS DATOS DEL CONTRATO
+# =============================================================================
+
+RANGO_ANO_VEHICULO = (2016, 2025)
+
+RANGO_VALOR_CUOTA = (180_000, 950_000)
+MULTIPLO_VALOR_CUOTA = 5_000
+
+PLAZOS_MESES_POSIBLES = (12, 18, 24, 36, 48, 60)
+
+# Ventana en la que puede caer la fecha de inicio del arriendo (inclusive).
+FECHA_INICIO_MINIMA = "2021-01-01"
+FECHA_INICIO_MAXIMA = "2025-06-30"
+
+RANGO_NUMERO_PAGARE = (100_000, 999_999)
+
+
+# =============================================================================
+# 6. CONTRAPARTE FIJA (ARRENDADORA)
+# =============================================================================
+# Empresa ficticia que arrienda el vehiculo. Aparece en TODOS los contratos y
+# sus datos NO forman parte del ground truth: existe justamente para que el
+# extractor tenga que distinguir cual de las dos partes es la que interesa.
+# Es el mismo problema que se da en los contratos reales, donde conviven la
+# empresa mandante y la contraparte.
+#
+# Los RUT de abajo son validos (digito verificador correcto) y caen en el mismo
+# tramo no asignado que el resto de los datos sinteticos.
+
+ARRENDADOR_RAZON_SOCIAL = "Flota Meridiano SpA"
+ARRENDADOR_RUT = "99.000.001-8"
+ARRENDADOR_GIRO = "Arriendo de vehículos motorizados sin chofer"
+ARRENDADOR_DOMICILIO = "Avenida Los Pinos 1450, piso 6, Providencia"
+ARRENDADOR_REPRESENTANTE = "Andrés Vergara Solís"
+ARRENDADOR_RUT_REPRESENTANTE = "50.000.001-5"
+
+
+# =============================================================================
+# 7. PLANTILLAS
+# =============================================================================
+# Peso relativo de cada layout cuando se genera un lote sin forzar plantilla.
+# Tres layouts distintos impiden que el extractor dependa de posiciones fijas.
+
+DISTRIBUCION_PLANTILLAS = {
+    "formal": 0.40,
+    "tabular": 0.30,
+    "compacta": 0.30,
+}
+
+
+# =============================================================================
+# 8. PERFILES DE ESCANEO
+# =============================================================================
+# Cada perfil describe una calidad de digitalizacion. Ningun literal numerico de
+# degradacion vive fuera de este diccionario.
+#
+#   dpi                   resolucion del rasterizado del PDF
+#   grados_rotacion       inclinacion aleatoria, en grados (min, max)
+#   sigma_ruido           desviacion estandar del ruido gaussiano (escala 0-255)
+#   tasa_sal_pimienta     fraccion de pixeles forzados a negro o blanco
+#   radio_desenfoque      radio del desenfoque gaussiano, en pixeles
+#   factor_brillo         multiplicador de brillo (min, max)
+#   factor_contraste      multiplicador de contraste (min, max)
+#   intensidad_vineteado  0 = iluminacion pareja, 1 = bordes muy oscuros
+#   calidad_jpeg          calidad de compresion (1-95)
+
+PERFILES_ESCANEO = {
+    "limpio": {
+        "dpi": 300,
+        "grados_rotacion": (-0.3, 0.3),
+        "sigma_ruido": 2.0,
+        "tasa_sal_pimienta": 0.0,
+        "radio_desenfoque": 0.3,
+        "factor_brillo": (0.98, 1.02),
+        "factor_contraste": (0.98, 1.02),
+        "intensidad_vineteado": 0.05,
+        "calidad_jpeg": 92,
+    },
+    "medio": {
+        "dpi": 200,
+        "grados_rotacion": (-1.2, 1.2),
+        "sigma_ruido": 8.0,
+        "tasa_sal_pimienta": 0.0015,
+        "radio_desenfoque": 0.7,
+        "factor_brillo": (0.90, 1.08),
+        "factor_contraste": (0.88, 1.10),
+        "intensidad_vineteado": 0.18,
+        "calidad_jpeg": 75,
+    },
+    "degradado": {
+        "dpi": 150,
+        "grados_rotacion": (-2.5, 2.5),
+        "sigma_ruido": 16.0,
+        "tasa_sal_pimienta": 0.0060,
+        "radio_desenfoque": 1.1,
+        "factor_brillo": (0.80, 1.15),
+        "factor_contraste": (0.78, 1.18),
+        "intensidad_vineteado": 0.30,
+        "calidad_jpeg": 55,
+    },
+}
+
+PERFIL_ESCANEO_POR_DEFECTO = "medio"
+
+# Valor especial de --perfil: reparte el lote entre los tres perfiles.
+PERFIL_MIXTO = "mixto"
+
+EXTENSION_ESCANEO = ".jpg"
+
+
+# =============================================================================
+# 9. CATALOGOS DE VOCABULARIO (inventados)
+# =============================================================================
+
+# Los acentos y la letra enie son intencionales: los contratos reales los llevan
+# y el extractor debe resolverlos correctamente sobre texto salido de OCR.
+
+NOMBRES_PILA = (
+    "Alonso", "Bernardita", "Camilo", "Daniela", "Esteban", "Fernanda",
+    "Gonzalo", "Hilda", "Ignacio", "Javiera", "Karina", "Lucas",
+    "Macarena", "Nicolás", "Olivia", "Patricio", "Rocío", "Sebastián",
+    "Tamara", "Valentina", "Ximena", "Rodrigo", "Constanza", "Emilia",
+)
+
+APELLIDOS = (
+    "Alarcón", "Bustamante", "Cárdenas", "Donoso", "Escalante", "Fuenzalida",
+    "Guzmán", "Herrera", "Illanes", "Jaramillo", "Lagos", "Maldonado",
+    "Norambuena", "Olivares", "Peralta", "Quintana", "Riquelme", "Sandoval",
+    "Tapia", "Urrutia", "Valdivia", "Zambrano", "Cifuentes", "Mardones",
+)
+
+# Piezas para componer razones sociales ficticias.
+NUCLEOS_RAZON_SOCIAL = (
+    "Andes Austral", "Cumbre Verde", "Ruta Norte", "Vega Central",
+    "Patagonia Log", "Terra Nova", "Puerto Claro", "Alto Nevado",
+    "Cordillera Azul", "Bahia Serena", "Valle Hondo", "Punta Lima",
+    "Sur Directo", "Cauce Limpio", "Faro Once", "Loma Blanca",
+)
+
+RUBROS_RAZON_SOCIAL = (
+    "Transportes", "Logística", "Distribuidora", "Servicios",
+    "Comercializadora", "Ingeniería", "Constructora", "Maquinarias",
+)
+
+SUFIJOS_SOCIETARIOS = ("S.A.", "SpA", "Ltda.", "S.A.", "SpA")
+
+GIROS = (
+    "Transporte de carga por carretera",
+    "Distribución mayorista de alimentos",
+    "Servicios de ingeniería y montaje",
+    "Arriendo de maquinaria y equipos",
+    "Comercio al por mayor de insumos industriales",
+    "Servicios de logística y almacenaje",
+    "Construcción de obras menores",
+    "Mantenimiento de equipos industriales",
+)
+
+# Nombres de calle genericos, no vinculados a una direccion real concreta.
+NOMBRES_CALLE = (
+    "Los Aromos", "Las Acacias", "Los Cipreses", "El Roble",
+    "Avenida Central", "Los Alerces", "Las Encinas", "El Peumo",
+    "Los Canelos", "Avenida Los Pinos", "Las Camelias", "El Boldo",
+)
+
+TIPOS_VIA = ("Calle", "Avenida", "Pasaje")
+
+COMUNAS = (
+    "Providencia", "Ñuñoa", "La Florida", "Maipú", "Puente Alto",
+    "San Miguel", "Quilicura", "Renca", "Peñalolén", "Macul",
+    "Concepción", "Valparaíso", "Rancagua", "Temuco", "Antofagasta",
+)
+
+CIUDADES = (
+    "Santiago", "Valparaíso", "Concepción", "Rancagua", "Temuco",
+    "Antofagasta", "La Serena", "Puerto Montt",
+)
+
+# Marcas y modelos INVENTADOS. Se evitan marcas reales por la restriccion de no
+# incluir nombres de empresas existentes; para un extractor basado en regex la
+# diferencia es irrelevante, y deja el repositorio libre de marcas de terceros.
+MARCAS_Y_MODELOS = {
+    "Nordvik": ("K-200", "K-350", "Trailmax"),
+    "Kirumo": ("Serie 4", "Serie 7", "Kargo"),
+    "Talvera": ("Vantor", "Vantor XL", "Urbe"),
+    "Zentara": ("Lumen X", "Lumen S", "Delta 9"),
+    "Aurox": ("Carga 1500", "Carga 2500", "Pico"),
+    "Velmar": ("Rumbo", "Rumbo Plus", "Costa"),
+}
+
+MESES_EN_PALABRAS = (
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+)

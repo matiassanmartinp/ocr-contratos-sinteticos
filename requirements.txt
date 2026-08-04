@@ -1,0 +1,12 @@
+# Generacion de PDFs
+reportlab>=4.2
+
+# Rasterizado de PDF a imagen
+PyMuPDF>=1.24
+
+# Degradacion de imagen (ruido, rotacion, desenfoque)
+Pillow>=10.3
+numpy>=1.26
+
+# Pruebas
+pytest>=8.2
