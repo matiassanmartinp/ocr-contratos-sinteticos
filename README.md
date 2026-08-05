@@ -25,8 +25,8 @@ dónde caen, cómo se rotulan y en qué formato se imprimen. Eso es justamente l
 impide extraerlos por posición.*
 
 **Cinco minutos de lectura:** el [resultado](#resultado), [los dos motores de
-OCR](#los-dos-motores-de-ocr) y por qué el dataset es
-[sintético](#por-qué-el-dataset-es-sintético). **Para ejecutarlo:**
+OCR](#los-dos-motores-de-ocr), el [origen del proyecto](#origen-del-proyecto) y por
+qué el dataset es [sintético](#por-qué-el-dataset-es-sintético). **Para ejecutarlo:**
 [instalación](#instalación) y [uso](#uso). **Para revisar el código:**
 [cómo funciona el extractor](extractor/README.md) y [cómo se
 mide](evaluacion/README.md).
@@ -117,11 +117,20 @@ idénticos.
 | `tesseract` | OCR local | no | gratis |
 | `documentai` | Google Cloud Document AI | sí | por página |
 
-**Por qué los dos y no solo el de producción.** El proceso real corre sobre
-Document AI. Si esa fuera la única vía, nadie podría clonar este repositorio y
-verificar nada: haría falta una cuenta de Google Cloud, un procesador creado y
-facturación activa. Tesseract existe para que el proyecto sea ejecutable y las
-cifras publicadas, reproducibles por cualquiera.
+**Por qué Tesseract es el motor por defecto aquí, aunque no lo sea en producción.**
+El proceso real corre sobre Document AI. En esta réplica pública el motor por
+defecto es Tesseract, y es una decisión deliberada por dos razones.
+
+La primera es que nada de la configuración de nube —el identificador del proyecto,
+el del procesador, la cuenta de servicio— tiene por qué quedar expuesto en un
+repositorio público. Manteniendo Document AI como una vía que hay que activar
+explícitamente, el repositorio no necesita ninguna credencial para funcionar, y no
+hay forma de que una se filtre por descuido en la configuración por defecto.
+
+La segunda es de verificabilidad. Si la única vía fuera la de nube, nadie podría
+clonar esto y comprobar nada: haría falta una cuenta de Google Cloud, un procesador
+creado y facturación activa. Tesseract existe para que el proyecto sea ejecutable y
+las cifras publicadas, reproducibles por cualquiera.
 
 **En qué se diferencian, más allá del precio.** Con Tesseract el preproceso local
 —enderezar, aplanar la iluminación, quitar las motas— es lo que más pesa en el
@@ -133,9 +142,15 @@ con un preproceso local suele empeorar lo que el servicio habría hecho mejor so
 
 Las cuatro filas de la tabla de resultados son mediciones reales sobre este
 dataset. **Document AI no tiene fila**, y conviene decir por qué en vez de dejar el
-hueco sin explicar: medirlo exige una cuenta con facturación activa, y no la tengo.
-Un número inventado, o copiado de un benchmark ajeno, valdría menos que la
-ausencia.
+hueco sin explicar.
+
+Medirlo exige un procesador con facturación activa. Las credenciales con las que
+trabajé pertenecen al proyecto del que salió esta réplica (ver [origen del
+proyecto](#origen-del-proyecto)) y usarlas para medir un repositorio personal sería
+gastar recursos de un tercero en beneficio propio. Levantar un procesador aparte es
+posible y está a un comando de distancia, pero mientras no lo haga el número no
+existe, y un número inventado —o copiado de un benchmark ajeno— valdría menos que
+la ausencia.
 
 Lo que sí está cubierto de esa integración:
 
@@ -172,6 +187,30 @@ La comparación es directa: mismo dataset, misma semilla, mismas métricas. Esa 
 pregunta que un equipo se hace antes de aprobar el gasto recurrente de un servicio
 de nube, y el proyecto está armado para responderla con datos en vez de con
 intuición.
+
+---
+
+## Origen del proyecto
+
+Esto no es un ejercicio inventado. Replica la arquitectura de un proceso de
+extracción documental que construí profesionalmente, sobre contratos de arriendo
+vehicular reales, y que en producción corre sobre **Google Cloud Document AI**.
+
+Lo que se conserva de aquel trabajo es la lógica: el algoritmo del dígito
+verificador, los formatos de patente, la nomenclatura de los campos, la necesidad
+de distinguir entre las dos partes que aparecen en todo contrato, y la elección de
+Document AI como motor de reconocimiento. Lo que no se conserva es un solo dato:
+ni un PDF, ni una fila de salida, ni un nombre, ni un RUT.
+
+**Las métricas de aquel despliegue no se publican aquí.** Describen el rendimiento
+de un proceso interno sobre la cartera de contratos de un cliente; son información
+suya, no material de portafolio mío. Por eso las únicas cifras de este repositorio
+son las que se pueden reproducir ejecutándolo.
+
+Esa distinción es, en el fondo, de lo que trata el proyecto. La pregunta que lo
+originó no fue "¿cómo extraigo campos de un PDF?" sino "¿cómo demuestro que sé
+hacerlo, sin exponer los documentos con los que aprendí?". La respuesta fue
+construir el dataset en vez de anonimizarlo.
 
 ---
 
