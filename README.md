@@ -117,9 +117,10 @@ idénticos.
 | `tesseract` | OCR local | no | gratis |
 | `documentai` | Google Cloud Document AI | sí | por página |
 
-**Por qué Tesseract es el motor por defecto aquí, aunque no lo sea en producción.**
-El proceso real corre sobre Document AI. En esta réplica pública el motor por
-defecto es Tesseract, y es una decisión deliberada por dos razones.
+**Por qué Tesseract es el motor por defecto aquí.** El sistema original estaba
+configurado al revés: Document AI como motor preferido y Tesseract como respaldo
+local para cuando el servicio no respondiera. En esta réplica pública el orden se
+invierte, y es una decisión deliberada por dos razones.
 
 La primera es que nada de la configuración de nube —el identificador del proyecto,
 el del procesador, la cuenta de servicio— tiene por qué quedar expuesto en un
@@ -137,6 +138,13 @@ las cifras publicadas, reproducibles por cualquiera.
 resultado, y por eso el extractor lo hace antes de reconocer. Document AI aplica su
 propio realce sobre el documento original, así que se le envía tal cual: adelantarse
 con un preproceso local suele empeorar lo que el servicio habría hecho mejor solo.
+
+Sobre los documentos del despliegue original que sí pasaron por Document AI, el
+servicio resolvía escaneos en los que el motor local se perdía. **Es una observación
+de uso, no una medición**: nunca se corrieron los dos motores sobre los mismos
+archivos, así que no hay una comparación que respalde cuánto mejor. Esa es
+exactamente la brecha que este repositorio deja lista para cerrar — ver
+[completar la tabla](#completar-la-tabla).
 
 ### Qué está medido y qué no
 
@@ -194,18 +202,29 @@ intuición.
 
 Esto no es un ejercicio inventado. Replica la arquitectura de un proceso de
 extracción documental que construí profesionalmente, sobre contratos de arriendo
-vehicular reales, y que en producción corre sobre **Google Cloud Document AI**.
+vehicular reales, con **Google Cloud Document AI** como motor de reconocimiento y
+Tesseract como respaldo local.
 
 Lo que se conserva de aquel trabajo es la lógica: el algoritmo del dígito
 verificador, los formatos de patente, la nomenclatura de los campos, la necesidad
-de distinguir entre las dos partes que aparecen en todo contrato, y la elección de
-Document AI como motor de reconocimiento. Lo que no se conserva es un solo dato:
-ni un PDF, ni una fila de salida, ni un nombre, ni un RUT.
+de distinguir entre las dos partes que aparecen en todo contrato, y la arquitectura
+de dos motores intercambiables. Lo que no se conserva es un solo dato: ni un PDF,
+ni una fila de salida, ni un nombre, ni un RUT.
 
-**Las métricas de aquel despliegue no se publican aquí.** Describen el rendimiento
-de un proceso interno sobre la cartera de contratos de un cliente; son información
-suya, no material de portafolio mío. Por eso las únicas cifras de este repositorio
-son las que se pueden reproducir ejecutándolo.
+**Las métricas de aquel despliegue no se publican aquí**, por dos motivos
+distintos.
+
+El primero es que describen el rendimiento de un proceso interno sobre la cartera
+de contratos de un cliente: son información suya, no material de portafolio mío.
+
+El segundo es metodológico, y vale la pena decirlo porque es el mismo argumento que
+sostiene la sección de métricas de este repositorio. Aquella validación medía
+**completitud** —qué proporción de los campos quedaba llena— y no exactitud, porque
+no había ground truth contra el cual contrastar los valores. Un campo lleno con un
+dato equivocado contaba como éxito. Esa limitación fue justamente lo que motivó
+construir este proyecto al revés: generar los documentos permite conocer la
+respuesta correcta de antemano, y recién entonces se puede hablar de precisión en
+vez de solo de cobertura.
 
 Esa distinción es, en el fondo, de lo que trata el proyecto. La pregunta que lo
 originó no fue "¿cómo extraigo campos de un PDF?" sino "¿cómo demuestro que sé
@@ -275,8 +294,8 @@ variable de entorno `TESSERACT_EXE` (ver [`.env.example`](.env.example)).
 
 ### Google Document AI
 
-Es el motor que corre en el proceso real. Su biblioteca se instala aparte para no
-imponer el SDK de Google Cloud a quien solo quiera ejecutar el proyecto en local,
+Es el motor de reconocimiento del sistema original. Su biblioteca se instala aparte
+para no imponer el SDK de Google Cloud a quien solo quiera ejecutar esto en local,
 pero la integración es parte del diseño y no un agregado — ver [los dos
 motores](#los-dos-motores-de-ocr).
 

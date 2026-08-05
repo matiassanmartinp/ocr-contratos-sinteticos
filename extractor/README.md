@@ -87,7 +87,9 @@ puede borrar. Sin ese preproceso el perfil degradado cae de 31% a 3%.
 
 **Document AI.** Recibe el documento tal cual, sin preproceso local: el servicio
 aplica su propio realce y adelantarse suele empeorar el resultado. Las credenciales
-se leen del entorno y no existen en el repositorio.
+se leen del entorno y no existen en el repositorio. Es el motor de reconocimiento
+del sistema original del que salió esta réplica; aquí es una vía que hay que activar
+explícitamente, para que el repositorio funcione sin credencial alguna.
 
 Sobre texto reconocido se activa `corregir_ocr=True`, que repara las confusiones
 típicas de dígitos en los RUT —la O por un cero, la ele por un uno— usando el
