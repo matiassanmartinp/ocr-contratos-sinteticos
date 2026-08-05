@@ -27,7 +27,9 @@ _MESES = {
     for numero, nombre in enumerate(cfg.MESES_EN_PALABRAS, start=1)
 }
 
-_FECHA_NUMERICA = re.compile(r"\b([0-3]?\d)\s*[/\-.]\s*([01]?\d)\s*[/\-.]\s*((?:19|20)\d{2})\b")
+_FECHA_NUMERICA = re.compile(
+    r"\b([0-3]?\d)\s*[/\-.]\s*([01]?\d)\s*[/\-.]\s*((?:19|20)\d{2})\b"
+)
 _FECHA_TEXTUAL = re.compile(
     r"\b([0-3]?\d)\s+de\s+([a-záéíóú]+)\s+(?:del?\s+)?((?:19|20)\d{2})\b",
     re.IGNORECASE,

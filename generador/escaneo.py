@@ -124,7 +124,8 @@ def simular_escaneo(
     rutas_generadas: list[Path] = []
     for numero, pagina in enumerate(rasterizar_pdf(ruta_pdf, parametros["dpi"]), start=1):
         degradada = degradar_imagen(pagina, parametros, aleatorio)
-        ruta_imagen = directorio_destino / f"{id_documento}_p{numero:02d}{cfg.EXTENSION_ESCANEO}"
+        nombre_imagen = f"{id_documento}_p{numero:02d}{cfg.EXTENSION_ESCANEO}"
+        ruta_imagen = directorio_destino / nombre_imagen
         degradada.save(
             ruta_imagen,
             format="JPEG",

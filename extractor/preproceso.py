@@ -127,7 +127,8 @@ def estimar_inclinacion(imagen: Image.Image, parametros: dict | None = None) -> 
     return mejor_angulo
 
 
-def enderezar(imagen: Image.Image, parametros: dict | None = None) -> tuple[Image.Image, float]:
+def enderezar(imagen: Image.Image,
+              parametros: dict | None = None) -> tuple[Image.Image, float]:
     """Corrige la inclinacion de la pagina y devuelve la imagen y el angulo aplicado."""
     angulo = estimar_inclinacion(imagen, parametros)
     if abs(angulo) < 1e-6:

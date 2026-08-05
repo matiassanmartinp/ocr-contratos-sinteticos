@@ -1,15 +1,30 @@
 # Extracción de campos desde contratos en PDF mediante OCR
 
-Proyecto de portafolio: extraer automáticamente los campos de contratos de
-arriendo vehicular escaneados, y **medir** qué tan bien se extraen.
+[![pruebas](https://github.com/matiassanmartinp/ocr-contratos-sinteticos/actions/workflows/pruebas.yml/badge.svg)](https://github.com/matiassanmartinp/ocr-contratos-sinteticos/actions/workflows/pruebas.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/)
+[![ruff](https://img.shields.io/badge/lint-ruff-261230)](https://docs.astral.sh/ruff/)
+[![licencia MIT](https://img.shields.io/badge/licencia-MIT-green)](LICENSE)
 
-El problema es real; los datos, no. Este repositorio genera su propio dataset
-sintético, de modo que cualquiera pueda clonarlo, reproducir el dataset completo
-con una semilla y evaluar un extractor sin que exista un solo documento real de
-por medio.
+Extraer automáticamente quince campos de contratos de arriendo vehicular
+escaneados, y **medir** qué tan bien se extraen.
 
-> **Estado:** completo. Generación sintética, extracción por texto embebido y por
-> OCR, y evaluación contra ground truth.
+El problema es real; los datos, no. El repositorio genera su propio dataset
+sintético, así que se puede clonar, reproducir el dataset completo con una semilla
+y evaluar el extractor sin que exista un solo documento real de por medio.
+
+![Los tres layouts que genera el proyecto](docs/plantillas.png)
+
+*El mismo contrato en los tres layouts. Los datos son idénticos; lo que cambia es
+dónde caen, cómo se rotulan y en qué formato se imprimen. Eso es justamente lo que
+impide extraerlos por posición.*
+
+**Cinco minutos de lectura:** el [resultado](#resultado) y por qué el dataset es
+[sintético](#por-qué-el-dataset-es-sintético). **Para ejecutarlo:**
+[instalación](#instalación) y [uso](#uso). **Para revisar el código:**
+[cómo funciona el extractor](extractor/README.md) y [cómo se
+mide](evaluacion/README.md).
+
+---
 
 ## Resultado
 
@@ -45,6 +60,13 @@ JPEG al 55%) es donde Tesseract deja de servir: no se equivoca más, directament
 no lee, y el 57,8% de omisión lo confirma. Eso es una recomendación operativa
 concreta: exigir un mínimo de calidad al digitalizar rinde más que cualquier
 ajuste del extractor.
+
+![Un escaneo degradado, antes y después del preproceso](docs/preproceso.png)
+
+*Antes de reconocer hay que enderezar la página, aplanar la iluminación y quitar
+las motas. Sin ese paso el perfil degradado cae a 3% en vez de 31%: el texto se
+lee bien, pero el motor de OCR ve una página cubierta de suciedad y su análisis de
+layout se pierde. El preproceso pesa más que cualquier parámetro del motor.*
 
 ### La omisión es deliberada
 
@@ -264,10 +286,14 @@ python -m extractor
 python -m evaluacion --etiqueta "texto nativo"
 ```
 
-## Pruebas
+## Calidad del código
 
 ```bash
 python -m pytest -q
+```
+
+```bash
+python -m ruff check .
 ```
 
 145 pruebas. Cubren el dígito verificador contra una implementación independiente,

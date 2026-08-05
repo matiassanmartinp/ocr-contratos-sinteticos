@@ -152,7 +152,8 @@ _DOMICILIO = (
 )
 
 _NOMBRE_REPRESENTANTE = (
-    re.compile(r"rep(?:resentante|\.)\s*legal\s*:?\s+(.{5,70}?)\s+(?=C\.I\.|RUT|CEDULA)", re.I),
+    re.compile(r"rep(?:resentante|\.)\s*legal\s*:?\s+(.{5,70}?)"
+               r"\s+(?=C\.I\.|RUT|CEDULA)", re.I),
     re.compile(r"su\s+representante\s+(.{5,70}?)\s*,\s*c[eé]dula", re.I),
 )
 

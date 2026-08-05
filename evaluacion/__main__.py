@@ -81,7 +81,9 @@ def main(argumentos: list[str] | None = None) -> int:
         registros_obtenidos = [json.loads(linea) for linea in archivo if linea.strip()]
 
     resultados, sin_prediccion = comparar_lote(registros_esperados, registros_obtenidos)
-    print(redactor.redactar(resultados, registros_esperados, sin_prediccion, opciones.etiqueta))
+    print(redactor.redactar(
+        resultados, registros_esperados, sin_prediccion, opciones.etiqueta,
+    ))
 
     if opciones.json is not None:
         contenido = construir_metricas(resultados, registros_esperados, sin_prediccion)

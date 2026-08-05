@@ -104,7 +104,10 @@ def escribir_predicciones(registros: list[dict], ruta_salida: Path) -> Path:
     ruta_salida = Path(ruta_salida)
     ruta_salida.parent.mkdir(parents=True, exist_ok=True)
 
-    lineas = [json.dumps(registro, ensure_ascii=False, sort_keys=True) for registro in registros]
+    lineas = [
+        json.dumps(registro, ensure_ascii=False, sort_keys=True)
+        for registro in registros
+    ]
     ruta_salida.write_text("\n".join(lineas) + "\n", encoding="utf-8")
     return ruta_salida
 

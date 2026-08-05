@@ -78,9 +78,9 @@ def test_cada_layout_se_extrae_igual_de_bien(tmp_path, nombre_plantilla):
     }
     for registro in esperados:
         for campo in CAMPOS_CONTRATO:
-            assert str(obtenidos[registro["id_documento"]][campo]) == str(registro["campos"][campo]), (
-                f"{nombre_plantilla}/{campo}"
-            )
+            obtenido = obtenidos[registro["id_documento"]][campo]
+            esperado = registro["campos"][campo]
+            assert str(obtenido) == str(esperado), f"{nombre_plantilla}/{campo}"
 
 
 # =============================================================================

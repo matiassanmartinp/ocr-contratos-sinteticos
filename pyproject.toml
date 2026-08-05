@@ -1,0 +1,81 @@
+[project]
+name = "ocr-contratos-sinteticos"
+version = "1.0.0"
+description = "Extracción de campos desde contratos en PDF mediante OCR, con dataset sintético reproducible"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11"
+
+dependencies = [
+    "reportlab>=4.2",
+    "PyMuPDF>=1.24",
+    "Pillow>=10.3",
+    "numpy>=1.26",
+    "pytesseract>=0.3.10",
+]
+
+[project.optional-dependencies]
+# Solo para --motor documentai. Requiere ademas credenciales en el entorno.
+documentai = ["google-cloud-documentai>=2.29"]
+desarrollo = ["pytest>=8.2", "ruff>=0.6"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Falla si una prueba usa una marca que no esta declarada, para que un typo en un
+# decorador no haga que la prueba se salte en silencio.
+addopts = "--strict-markers"
+
+
+[tool.ruff]
+line-length = 95
+target-version = "py311"
+
+# Se usa el linter (`ruff check`) pero NO el formateador (`ruff format`). Hay
+# tablas alineadas a mano —los perfiles de escaneo, las tuplas de patrones— cuya
+# disposicion comunica su estructura de un vistazo, y el formateador automatico
+# las desarma. El linter atrapa lo que importa: errores reales, importaciones sin
+# usar, complejidad innecesaria.
+
+[tool.ruff.lint]
+select = [
+    "E",    # errores de estilo (pycodestyle)
+    "W",    # advertencias de estilo
+    "F",    # errores reales (pyflakes): variables sin usar, nombres indefinidos
+    "I",    # orden de las importaciones (isort)
+    "B",    # trampas frecuentes (flake8-bugbear)
+    "UP",   # modismos anticuados de Python (pyupgrade)
+    "C4",   # comprensiones innecesariamente complicadas
+    "SIM",  # simplificaciones evidentes
+    "RET",  # retornos redundantes
+    "ARG",  # argumentos que nunca se usan
+    "PTH",  # os.path donde corresponde pathlib
+    "RUF",  # reglas propias de ruff
+]
+ignore = [
+    # El proyecto esta escrito en espanol por decision explicita, incluidos los
+    # mensajes de las excepciones; esta regla exige extraerlos a variables.
+    "EM101", "EM102",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Las pruebas comparan contra valores literales a proposito: ese es su trabajo.
+"tests/*" = ["ARG001", "ARG002"]
+# El script de capturas ajusta sys.path antes de importar el proyecto.
+"docs/generar_capturas.py" = ["E402"]
+# RET504 pide devolver la expresion en vez de asignarla primero. Aqui la variable
+# con nombre es justamente lo que hace legible la cadena de degradaciones, que se
+# lee como una secuencia numerada de pasos; inlinear el ultimo romperia la simetria
+# con los anteriores por complacer al linter.
+"generador/escaneo.py" = ["RET504"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "configuracion",
+    "esquema_contrato",
+    "evaluacion",
+    "extractor",
+    "formato_chileno",
+    "generador",
+    "rasterizado",
+]

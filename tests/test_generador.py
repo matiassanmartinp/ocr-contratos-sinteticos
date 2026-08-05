@@ -45,7 +45,8 @@ def test_se_genera_un_pdf_y_un_json_por_contrato(lote):
 
     for registro in registros:
         assert (directorio / registro["archivos"]["pdf"]).is_file()
-        ruta_json = directorio / cfg.SUBDIRECTORIO_GROUND_TRUTH / f"{registro['id_documento']}.json"
+        carpeta = directorio / cfg.SUBDIRECTORIO_GROUND_TRUTH
+        ruta_json = carpeta / f"{registro['id_documento']}.json"
         assert ruta_json.is_file()
 
 

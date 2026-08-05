@@ -175,7 +175,8 @@ def construir(contrato: ContratoSintetico, aleatorio: Random) -> list:
     elementos.append(Spacer(1, 1.4 * cm))
     elementos.append(_tabla([
         ("Firma ARRENDADORA", f"{cfg.ARRENDADOR_REPRESENTANTE}<br/><br/>____________________"),
-        ("Firma ARRENDATARIO", f"{contrato.nombre_representante}<br/><br/>____________________"),
+        ("Firma ARRENDATARIO",
+         f"{contrato.nombre_representante}<br/><br/>____________________"),
     ]))
 
     return elementos

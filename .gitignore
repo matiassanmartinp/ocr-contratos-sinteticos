@@ -18,6 +18,12 @@ salidas/
 *.xlsx
 *.xls
 
+# Unica excepcion: las capturas que ilustran el README. Son imagenes generadas
+# por el propio proyecto, 100% sinteticas, y se regeneran con
+# `python docs/generar_capturas.py`. La regla anti-artefactos sigue vigente para
+# todo el resto del repositorio.
+!docs/*.png
+
 # =============================================================================
 # 2. DOCUMENTOS REALES — NUNCA VERSIONAR
 # -----------------------------------------------------------------------------

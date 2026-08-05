@@ -6,7 +6,6 @@ import pytest
 
 from extractor import normalizacion as norma
 
-
 # =============================================================================
 # FECHAS
 # =============================================================================
@@ -95,7 +94,8 @@ def test_la_correccion_de_ocr_no_inventa_un_rut_cuando_igual_no_cuadra():
 # =============================================================================
 
 def test_el_texto_libre_pierde_espacios_sobrantes_y_puntuacion_de_borde():
-    assert norma.canonizar_texto("  Loma  Blanca   Transportes S.A. ,") == "Loma Blanca Transportes S.A."
+    sucio = "  Loma  Blanca   Transportes S.A. ,"
+    assert norma.canonizar_texto(sucio) == "Loma Blanca Transportes S.A."
 
 
 def test_sin_acentos_deja_las_vocales_planas():

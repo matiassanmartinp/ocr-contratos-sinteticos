@@ -86,7 +86,7 @@ def test_la_correccion_de_iluminacion_empareja_el_papel():
 
     def brillo_de_centro(imagen):
         arreglo = np.asarray(imagen, dtype=np.float32)
-        alto, ancho = arreglo.shape
+        alto = arreglo.shape[0]
         return float(arreglo[alto // 2 - 20:alto // 2 + 20, 20:60].mean())
 
     desnivel_antes = abs(brillo_de_centro(pagina) - brillo_de_esquina(pagina))
@@ -138,8 +138,8 @@ def test_otsu_separa_los_dos_tonos_de_la_pagina():
 
     # Con el convenio de binarizar (mayor que el umbral es papel), la tinta queda
     # de un lado y el papel del otro.
-    assert not (30 > umbral)
-    assert 220 > umbral
+    assert not (umbral < 30)
+    assert umbral < 220
 
 
 def test_otsu_se_adapta_a_una_pagina_oscura_y_a_una_clara():

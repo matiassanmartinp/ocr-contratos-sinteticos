@@ -61,7 +61,8 @@ def comparar_valor(esperado, obtenido) -> tuple[str, float]:
     return INCORRECTO, SequenceMatcher(None, referencia, leido).ratio()
 
 
-def comparar_documento(id_documento: str, esperados: dict, obtenidos: dict) -> list[ResultadoCampo]:
+def comparar_documento(id_documento: str, esperados: dict,
+                       obtenidos: dict) -> list[ResultadoCampo]:
     """Compara los quince campos de un documento y devuelve un resultado por campo."""
     resultados: list[ResultadoCampo] = []
     for campo in CAMPOS_CONTRATO:
@@ -79,7 +80,9 @@ def comparar_documento(id_documento: str, esperados: dict, obtenidos: dict) -> l
     return resultados
 
 
-def comparar_lote(registros_esperados: list[dict], registros_obtenidos: list[dict]) -> tuple[list[ResultadoCampo], list[str]]:
+def comparar_lote(
+    registros_esperados: list[dict], registros_obtenidos: list[dict],
+) -> tuple[list[ResultadoCampo], list[str]]:
     """Compara un lote completo emparejando por identificador de documento.
 
     Devuelve los resultados de todos los campos y la lista de documentos que
@@ -98,7 +101,9 @@ def comparar_lote(registros_esperados: list[dict], registros_obtenidos: list[dic
         if id_documento not in por_id:
             sin_prediccion.append(id_documento)
         resultados.extend(
-            comparar_documento(id_documento, registro.get("campos", {}), por_id.get(id_documento, {}))
+            comparar_documento(
+                id_documento, registro.get("campos", {}), por_id.get(id_documento, {}),
+            )
         )
 
     return resultados, sin_prediccion
