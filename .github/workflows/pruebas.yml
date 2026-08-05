@@ -1,0 +1,68 @@
+name: pruebas
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version-python: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Clonar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar Python ${{ matrix.version-python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.version-python }}
+          cache: pip
+
+      # Tesseract no se instala con pip. Sin el, las pruebas de OCR se saltan
+      # solas y el CI dejaria de cubrir justamente la parte mas fragil.
+      - name: Instalar Tesseract con el idioma espanol
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends tesseract-ocr tesseract-ocr-spa
+          tesseract --list-langs
+
+      - name: Instalar dependencias
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ejecutar las pruebas
+        run: python -m pytest -q
+
+      # Comprobacion de extremo a extremo: generar, extraer y medir. Falla si la
+      # extraccion sobre texto nativo deja de ser perfecta, que es la linea base
+      # documentada en el README.
+      - name: Verificar el flujo completo
+        run: |
+          python -m generador --cantidad 12 --semilla 42 --solo-pdf
+          python -m extractor --motor nativo
+          python -m evaluacion --etiqueta "CI, texto nativo" --json salidas/metricas.json
+          python - <<'FIN'
+          import json, sys
+          from pathlib import Path
+          metricas = json.loads(Path("salidas/metricas.json").read_text(encoding="utf-8"))
+          exactitud = metricas["global"]["exactitud"]
+          print(f"exactitud sobre texto nativo: {exactitud:.3%}")
+          if exactitud < 1.0:
+              sys.exit("La extraccion sobre texto nativo dejo de ser perfecta.")
+          FIN
+
+      - name: Comprobar que no se cuele ningun artefacto generado
+        run: |
+          git status --porcelain
+          if git status --porcelain | grep -iE '\.(pdf|png|jpe?g|csv|xlsx)$'; then
+            echo "Hay artefactos generados sin ignorar."
+            exit 1
+          fi

@@ -13,7 +13,13 @@ import unicodedata
 from datetime import date
 
 import configuracion as cfg
-from formato_chileno import canonizar_patente, canonizar_rut, rut_es_valido
+from formato_chileno import (
+    canonizar_patente,
+    canonizar_rut,
+    patente_es_valida,
+    patente_sin_vocales,
+    rut_es_valido,
+)
 
 # Mes escrito en palabras -> numero. Se indexa sin acentos ni mayusculas.
 _MESES = {
@@ -104,5 +110,17 @@ def canonizar_rut_leido(bruto: str, corregir_ocr: bool = False) -> str:
 
 
 def canonizar_patente_leida(bruto: str) -> str:
-    """Canoniza una patente al formato sin separador (``YWXT31``)."""
-    return canonizar_patente(bruto)
+    """Canoniza una patente al formato sin separador y descarta las imposibles.
+
+    El registro chileno excluye las vocales de las patentes, asi que una vocal en
+    la parte alfabetica solo puede venir de una lectura errada: la O de un cero
+    mal reconocido es el caso tipico. Es la unica validacion disponible aqui,
+    porque una patente no tiene digito verificador que confirmarla.
+
+    Descartar el candidato hace que se pruebe la siguiente aparicion de la patente
+    en el documento, que en algunos layouts esta impresa mas de una vez.
+    """
+    canonica = canonizar_patente(bruto)
+    if patente_es_valida(canonica) and not patente_sin_vocales(canonica):
+        return ""
+    return canonica

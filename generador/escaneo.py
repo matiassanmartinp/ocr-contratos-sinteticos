@@ -11,15 +11,14 @@ define ninguna constante de degradacion propia.
 
 from __future__ import annotations
 
-import io
 from pathlib import Path
 from random import Random
 
-import fitz  # PyMuPDF
 import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 
 import configuracion as cfg
+from rasterizado import rasterizar_pdf
 
 
 def obtener_perfil(nombre_perfil: str) -> dict:
@@ -32,17 +31,6 @@ def obtener_perfil(nombre_perfil: str) -> dict:
             f"Perfil de escaneo desconocido: {nombre_perfil!r}. "
             f"Disponibles: {disponibles}."
         ) from None
-
-
-def rasterizar_pdf(ruta_pdf: Path, dpi: int) -> list[Image.Image]:
-    """Convierte cada pagina del PDF en una imagen PIL en escala de grises."""
-    paginas: list[Image.Image] = []
-    with fitz.open(str(ruta_pdf)) as documento:
-        for pagina in documento:
-            mapa_pixeles = pagina.get_pixmap(dpi=dpi, alpha=False)
-            imagen = Image.open(io.BytesIO(mapa_pixeles.tobytes("png")))
-            paginas.append(imagen.convert("L"))
-    return paginas
 
 
 def _aplicar_vineteado(arreglo: np.ndarray, intensidad: float) -> np.ndarray:

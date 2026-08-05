@@ -51,7 +51,28 @@ htmlcov/
 .env
 
 # =============================================================================
-# 4. OTROS ENTORNOS QUE DEJAN RESIDUOS EN LA CARPETA
+# 4. CREDENCIALES — NUNCA VERSIONAR
+# -----------------------------------------------------------------------------
+# El riesgo real no es escribir una clave en el codigo, es que el JSON de una
+# cuenta de servicio de Google Cloud termine en la carpeta del proyecto.
+# La configuracion se lee del entorno; ver .env.example.
+# =============================================================================
+.env
+.env.*
+!.env.example
+*credential*.json
+*credentials*.json
+service-account*.json
+service_account*.json
+*-key.json
+gcp-*.json
+google-*.json
+client_secret*.json
+*.pem
+*.p12
+
+# =============================================================================
+# 5. OTROS ENTORNOS QUE DEJAN RESIDUOS EN LA CARPETA
 # =============================================================================
 .Rhistory
 .Rdata
@@ -59,7 +80,7 @@ htmlcov/
 .Rproj.user/
 
 # =============================================================================
-# 5. SISTEMA OPERATIVO Y EDITORES
+# 6. SISTEMA OPERATIVO Y EDITORES
 # =============================================================================
 Thumbs.db
 desktop.ini

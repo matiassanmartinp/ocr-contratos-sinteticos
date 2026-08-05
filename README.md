@@ -8,30 +8,64 @@ sintético, de modo que cualquiera pueda clonarlo, reproducir el dataset complet
 con una semilla y evaluar un extractor sin que exista un solo documento real de
 por medio.
 
-> **Estado:** generador, evaluación y extractor sobre texto nativo, terminados y
-> medidos. Falta la vía OCR para documentos escaneados.
+> **Estado:** completo. Generación sintética, extracción por texto embebido y por
+> OCR, y evaluación contra ground truth.
 
-## Resultado actual
+## Resultado
 
-| Entrada | Exactitud por campo | Documentos perfectos |
-|---|---|---|
-| Texto nativo del PDF | **100,0%** | **100,0%** |
-| Escaneo limpio | pendiente | |
-| Escaneo medio | pendiente | |
-| Escaneo degradado | pendiente | |
+Treinta contratos, los **mismos treinta** en las cuatro filas: lo único que cambia
+es la calidad de la imagen que entra. La degradación usa su propio generador
+aleatorio, así que cambiar de perfil no cambia los datos y la comparación es
+pareada.
 
-Medido sobre 200 contratos generados con una semilla distinta de la usada para
-escribir los patrones: 3.000 campos, cero errores, cero omisiones y cero
-confusiones con la contraparte.
+| Entrada | Exactitud por campo | Documentos perfectos | Error | Omisión | s/doc |
+|---|---|---|---|---|---|
+| Texto nativo del PDF | **100,0%** | **100,0%** | 0,0% | 0,0% | 0,01 |
+| Escaneo limpio (Tesseract) | 94,4% | 46,7% | 2,2% | 3,3% | 2,4 |
+| Escaneo medio (Tesseract) | 80,7% | 0,0% | 7,3% | 12,0% | 1,9 |
+| Escaneo degradado (Tesseract) | 31,1% | 0,0% | 11,1% | 57,8% | 2,0 |
 
-Ese 100% es el **techo de la lógica de parseo**, no el rendimiento del sistema
-completo. Separar las dos cosas es deliberado: midiendo primero sobre texto limpio
-se sabe cuánto cuesta el OCR, y por lo tanto si conviene invertir en mejorar los
-patrones o en mejorar la calidad del escaneo. Es la pregunta que de verdad importa
-cuando el proceso corre sobre documentos reales.
+Tres cosas que dice esta tabla y que no se ven en un promedio global:
+
+**El parseo no es el cuello de botella.** Sobre texto limpio los quince campos
+salen perfectos, también con una semilla nunca vista (200 documentos, 3.000
+campos, cero errores). Todo lo que se pierde después lo pierde el OCR, no los
+patrones. Si el objetivo fuera subir la precisión, invertir en mejorar las regex
+sería trabajo desperdiciado; el margen está en la calidad del escaneo.
+
+**La exactitud por documento se derrumba mucho antes que la exactitud por campo.**
+Con escaneos limpios el 94,4% de los campos está bien, pero solo el 46,7% de los
+contratos está *completo*. Quince campos por documento castigan duro: basta que
+uno falle para invalidar la fila. Si la salida se usa sin revisión humana, la
+segunda columna es la que manda.
+
+**Hay un punto de quiebre, no una pendiente.** Entre limpio y medio se pierden 14
+puntos; entre medio y degradado, 50. El perfil degradado (150 DPI, ruido fuerte,
+JPEG al 55%) es donde Tesseract deja de servir: no se equivoca más, directamente
+no lee, y el 57,8% de omisión lo confirma. Eso es una recomendación operativa
+concreta: exigir un mínimo de calidad al digitalizar rinde más que cualquier
+ajuste del extractor.
+
+### La omisión es deliberada
+
+Cuando el reconocimiento falla, el extractor prefiere devolver el campo vacío
+antes que un valor dudoso. Los RUT se validan con su dígito verificador y las
+patentes contra el alfabeto del registro chileno, que excluye vocales. Un campo
+vacío se detecta en cualquier revisión; uno incorrecto se cuela hasta la planilla
+final. Por eso el informe separa error de omisión en vez de sumarlos.
+
+### Reproducir la medición
 
 ```bash
-python -m generador --cantidad 200 --semilla 777 --solo-pdf && python -m extractor && python -m evaluacion
+python -m generador --cantidad 30 --semilla 2026 --perfil medio
+```
+
+```bash
+python -m extractor --entrada salidas/escaneos --motor tesseract
+```
+
+```bash
+python -m evaluacion --etiqueta "OCR medio"
 ```
 
 ---
@@ -75,8 +109,43 @@ Aquí el repositorio **no puede** filtrar nada, porque nunca contuvo nada:
 pip install -r requirements.txt
 ```
 
-Solo dependencias de Python — no requiere Tesseract, Poppler ni binarios
-externos. El rasterizado usa PyMuPDF.
+Eso basta para generar el dataset y para extraer desde PDFs con texto embebido.
+
+**Para la vía OCR hace falta además el binario de Tesseract**, que no se instala
+con pip:
+
+| Sistema | Comando |
+|---|---|
+| Debian / Ubuntu | `sudo apt-get install tesseract-ocr tesseract-ocr-spa` |
+| macOS | `brew install tesseract tesseract-lang` |
+| Windows | Instalador de [UB Mannheim](https://github.com/UB-Mannheim/tesseract/wiki), marcando el idioma español |
+
+Comprobar que quedó bien, incluido el idioma:
+
+```bash
+tesseract --list-langs
+```
+
+Debe aparecer `spa`. Si el binario no está en el `PATH`, indicar su ruta en la
+variable de entorno `TESSERACT_EXE` (ver [`.env.example`](.env.example)).
+
+### Google Document AI (opcional)
+
+El proceso real usa Document AI. El repositorio trae la integración, pero **no
+contiene ninguna credencial**: todo se lee del entorno.
+
+```bash
+pip install -r requirements-opcional.txt
+```
+
+```bash
+cp .env.example .env
+```
+
+Completar en `.env` la ruta al JSON de la cuenta de servicio y el nombre de
+recurso del procesador. El archivo `.env` y cualquier JSON de credenciales están
+excluidos en el [`.gitignore`](.gitignore). Sin estas variables el proyecto
+funciona igual con Tesseract; solo se desactiva `--motor documentai`.
 
 ## Uso
 
@@ -96,6 +165,19 @@ Opciones principales:
 | `--plantilla` | Fuerza un layout: `formal`, `tabular` o `compacta` |
 | `--solo-pdf` | Omite el rasterizado (solo PDFs nativos) |
 | `--limpiar` | Borra los artefactos previos antes de generar |
+
+Extraer y medir:
+
+```bash
+python -m extractor --entrada salidas/escaneos --motor tesseract
+```
+
+| `--motor` | Qué usa |
+|---|---|
+| `auto` | Texto embebido si el documento lo trae; si no, Tesseract |
+| `nativo` | Solo texto embebido, sin OCR. Es el techo de la lógica de parseo |
+| `tesseract` | OCR local. No necesita credenciales |
+| `documentai` | Google Cloud Document AI. Requiere credenciales en el entorno |
 
 Resultado en `salidas/`:
 
@@ -161,8 +243,9 @@ Definición y forma canónica de cada uno en
 configuracion.py      Todos los parámetros ajustables, en un solo lugar
 esquema_contrato.py   Definición de los 15 campos y su forma canónica
 formato_chileno.py    RUT con dígito verificador y patente, compartidos
+rasterizado.py        PDF a imagen, compartido por generador y extractor
 generador/            Datos sintéticos, plantillas, render PDF, escaneo, ground truth
-extractor/            Lectura del PDF, patrones por campo, normalización canónica
+extractor/            Lectura (nativa y OCR), preproceso, patrones, normalización
 evaluacion/           Comparación contra ground truth y métricas
 tests/                Pruebas con pytest
 ```
@@ -187,9 +270,20 @@ python -m evaluacion --etiqueta "texto nativo"
 python -m pytest -q
 ```
 
-Cubren el dígito verificador contra una implementación independiente, el formato
-de las patentes, la coherencia entre fechas y plazo, que el ground truth esté
-completo y que sus valores aparezcan efectivamente en el PDF, que el rasterizado
-respete el DPI del perfil, que la degradación crezca con la agresividad del
-perfil, y que dos corridas con la misma semilla produzcan JSON idénticos byte a
-byte.
+145 pruebas. Cubren el dígito verificador contra una implementación independiente,
+el formato de las patentes, la coherencia entre fechas y plazo, que el ground truth
+esté completo y que sus valores aparezcan efectivamente en el PDF, que el
+rasterizado respete el DPI del perfil, que la degradación crezca con la agresividad
+del perfil, que dos corridas con la misma semilla produzcan JSON idénticos byte a
+byte, que la extracción sobre texto nativo sea perfecta en los tres layouts, que
+nunca se devuelvan los datos de la contraparte fija, que el enderezado recupere el
+ángulo con que se torció la página, y que la evaluación cuente por separado errores
+y omisiones.
+
+Las pruebas de OCR se saltan solas si Tesseract no está instalado. Las de Document
+AI nunca contactan al servicio: solo comprueban que la falta de credenciales se
+informe con un mensaje útil.
+
+El [CI](.github/workflows/pruebas.yml) corre todo en Python 3.11, 3.12 y 3.13, con
+Tesseract instalado, y además verifica el flujo completo de extremo a extremo y que
+ningún artefacto generado se cuele al repositorio.

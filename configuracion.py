@@ -10,6 +10,7 @@ Los catalogos de este archivo son inventados. No corresponden a empresas,
 personas, marcas de vehiculo ni domicilios reales. Ver README.md.
 """
 
+import os
 from pathlib import Path
 
 # =============================================================================
@@ -202,15 +203,79 @@ def _valores_propios() -> dict:
 
 VALORES_PROPIOS = _valores_propios()
 
-#: Metodos de obtencion de texto que el extractor sabe usar.
-METODO_TEXTO_NATIVO = "texto_nativo"
-METODO_OCR = "ocr"
+#: Motores de lectura disponibles.
+#:   nativo      texto embebido del PDF, sin OCR. Es el techo de la logica de parseo.
+#:   tesseract   OCR local, gratuito y sin credenciales.
+#:   documentai  OCR de Google Cloud, el que corre en produccion.
+#:   auto        usa el texto embebido si lo hay y cae a tesseract si no.
+MOTOR_NATIVO = "nativo"
+MOTOR_TESSERACT = "tesseract"
+MOTOR_DOCUMENTAI = "documentai"
+MOTOR_AUTO = "auto"
+
+MOTORES_DISPONIBLES = (MOTOR_AUTO, MOTOR_NATIVO, MOTOR_TESSERACT, MOTOR_DOCUMENTAI)
+MOTOR_POR_DEFECTO = MOTOR_AUTO
 
 #: Minimo de caracteres para considerar que un PDF trae texto embebido util.
 #: Por debajo de este umbral el documento se trata como escaneado.
 MINIMO_CARACTERES_TEXTO_NATIVO = 200
 
 NOMBRE_ARCHIVO_PREDICCIONES = "predicciones.jsonl"
+
+# -- Tesseract ----------------------------------------------------------------
+# El binario NO se instala con pip. Ver README. Si no esta en el PATH, indicar su
+# ruta en la variable de entorno TESSERACT_EXE.
+TESSERACT_EJECUTABLE = os.environ.get("TESSERACT_EXE", "")
+TESSERACT_IDIOMA = "spa"
+TESSERACT_CONFIG = "--oem 3 --psm 4"
+TESSERACT_DPI_RASTERIZADO = 300
+
+# -- Preproceso de imagen antes del OCR ---------------------------------------
+# Un escaner deja el papel inclinado y la iluminacion despareja; enderezar y
+# binarizar antes de reconocer vale mas que cualquier ajuste del motor.
+PREPROCESO_OCR = {
+    # Enderezado de la pagina.
+    "corregir_inclinacion": True,
+    "rango_busqueda_grados": 3.0,
+    "paso_busqueda_grados": 0.25,
+    "ancho_analisis_inclinacion": 900,
+
+    # Ampliacion de escaneos de baja resolucion.
+    "ancho_minimo_para_ampliar": 1400,
+    "factor_ampliacion": 2.0,
+
+    # Aplanado de la iluminacion. El fondo se estima sobre una copia diminuta,
+    # porque la iluminacion es de frecuencia muy baja.
+    "corregir_iluminacion": True,
+    "ancho_estimacion_fondo": 160,
+    "radio_difuminado_fondo": 12,
+
+    # Filtro de mediana contra el ruido de sal y pimienta. El tamano debe ser
+    # impar. Se aplica solo si la pagina supera "umbral_motas" de pixeles
+    # ruidosos: sobre un escaneo limpio el filtro adelgaza los trazos y perjudica.
+    "tamano_filtro_mediana": 3,
+    "salto_minimo_mota": 40,
+    # Valor elegido midiendo sobre los tres perfiles. No los separa limpiamente
+    # porque sus niveles de ruido se solapan: subirlo favorece los escaneos
+    # buenos y castiga los medios. Se prefirio el lado de los casos dificiles,
+    # que es donde el filtro realmente hace falta.
+    "umbral_motas": 0.004,
+
+    "binarizar": True,
+}
+
+# -- Google Document AI -------------------------------------------------------
+# TODAS las credenciales vienen del entorno. Este repositorio no contiene ni debe
+# contener claves: ver .env.example.
+#
+#   GOOGLE_APPLICATION_CREDENTIALS  ruta al JSON de la cuenta de servicio
+#   GOOGLE_DOCAI_PROCESSOR          projects/<id>/locations/<loc>/processors/<id>
+#   GOOGLE_DOCAI_LOCATION           "us" o "eu", segun donde este el procesador
+DOCAI_PROCESADOR = os.environ.get("GOOGLE_DOCAI_PROCESSOR", "")
+DOCAI_UBICACION = os.environ.get("GOOGLE_DOCAI_LOCATION", "us")
+DOCAI_CREDENCIALES = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "")
+DOCAI_TIMEOUT_SEGUNDOS = 45
+DOCAI_PARSEO_NATIVO_PDF = True
 
 
 # =============================================================================
@@ -254,7 +319,7 @@ APELLIDOS = (
 NUCLEOS_RAZON_SOCIAL = (
     "Andes Austral", "Cumbre Verde", "Ruta Norte", "Vega Central",
     "Patagonia Log", "Terra Nova", "Puerto Claro", "Alto Nevado",
-    "Cordillera Azul", "Bahia Serena", "Valle Hondo", "Punta Lima",
+    "Cordillera Azul", "Bahía Serena", "Valle Hondo", "Punta Lima",
     "Sur Directo", "Cauce Limpio", "Faro Once", "Loma Blanca",
 )
 

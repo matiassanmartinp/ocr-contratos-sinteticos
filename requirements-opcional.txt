@@ -1,0 +1,7 @@
+# Dependencias opcionales. El proyecto funciona completo sin ellas.
+#
+#   pip install -r requirements-opcional.txt
+#
+# Solo hacen falta para ejecutar con --motor documentai, que ademas requiere
+# credenciales de Google Cloud definidas en el entorno. Ver .env.example.
+google-cloud-documentai>=2.29

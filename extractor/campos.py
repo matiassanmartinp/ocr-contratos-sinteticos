@@ -26,8 +26,13 @@ from extractor import normalizacion as norma
 # HELPERS
 # =============================================================================
 
-#: Un RUT dentro de un texto corrido, con o sin separador de miles.
-_RUT_EN_TEXTO = re.compile(r"\b(\d{1,3}(?:\.\d{3}){1,3}\s*-\s*[\dkK]|\d{7,9}\s*-\s*[\dkK])\b")
+#: Un RUT dentro de un texto corrido. El separador de miles puede ser un punto o
+#: un espacio: el OCR pierde los puntos con frecuencia y lee "99 000 001-8". Que
+#: el patron sea generoso no genera falsos positivos, porque despues el digito
+#: verificador descarta cualquier cosa que no sea un RUT de verdad.
+_RUT_EN_TEXTO = re.compile(
+    r"\b(\d{1,3}(?:[.\s]\d{3}){1,3}\s*[-—]\s*[\dkK]|\d{7,9}\s*[-—]\s*[\dkK])\b"
+)
 
 #: Cuantos caracteres antes del RUT se miran para saber de quien es.
 _VENTANA_ETIQUETA_RUT = 60
@@ -103,19 +108,27 @@ def clasificar_ruts(texto: str) -> tuple[list[str], list[str]]:
     return de_empresa, de_persona
 
 
-def extraer_rut_empresa(texto: str) -> str:
+def _canonizador_de_rut(corregir_ocr: bool):
+    """Devuelve el canonizador de RUT con o sin correccion de errores de lectura."""
+    def canonizar(bruto: str) -> str:
+        return norma.canonizar_rut_leido(bruto, corregir_ocr=corregir_ocr)
+    return canonizar
+
+
+def extraer_rut_empresa(texto: str, corregir_ocr: bool = False) -> str:
     """Devuelve el RUT de la empresa contraparte, descartando el propio."""
     de_empresa, _ = clasificar_ruts(texto)
     return _elegir(
-        de_empresa, norma.canonizar_rut_leido, cfg.VALORES_PROPIOS["rut_empresa"],
+        de_empresa, _canonizador_de_rut(corregir_ocr), cfg.VALORES_PROPIOS["rut_empresa"],
     )
 
 
-def extraer_rut_representante(texto: str) -> str:
+def extraer_rut_representante(texto: str, corregir_ocr: bool = False) -> str:
     """Devuelve la cedula del representante de la contraparte, descartando la propia."""
     _, de_persona = clasificar_ruts(texto)
     return _elegir(
-        de_persona, norma.canonizar_rut_leido, cfg.VALORES_PROPIOS["rut_representante"],
+        de_persona, _canonizador_de_rut(corregir_ocr),
+        cfg.VALORES_PROPIOS["rut_representante"],
     )
 
 
@@ -185,8 +198,11 @@ _VALOR_CUOTA = (
     re.compile(r"pesos\s*\(\s*(\$?\s*\d{1,3}(?:\.\d{3})+)\s*\)", re.I),
 )
 
+# El simbolo de grado de "N°" es de lo que peor lee un OCR: sale como º, o, ?, ",
+# o directamente se pierde. En vez de enumerar variantes, se admite cualquier
+# relleno corto que no sea un digito entre la palabra y el numero.
 _NUMERO_PAGARE = (
-    re.compile(r"pagar[ée]\s*(?:N\s*[°ºo]|n[uú]mero)?\s*:?\s*(\d{4,})", re.I),
+    re.compile(r"pagar[ée]\w*[^\d]{0,14}(\d{4,})", re.I),
 )
 
 _PLAZO_MESES = (
@@ -198,13 +214,16 @@ _PLAZO_MESES = (
 # EXTRACCION COMPLETA
 # =============================================================================
 
-def extraer_campos(texto: str) -> dict:
+def extraer_campos(texto: str, corregir_ocr: bool = False) -> dict:
     """Extrae los quince campos del contrato desde el texto plano del documento.
 
     Devuelve un diccionario con las mismas claves de ``esquema_contrato``. Los
-    campos que no se pudieron leer quedan como cadena vacia (o ``None`` en los
-    numericos): es preferible un campo vacio, que se detecta a simple vista, a uno
-    con un valor inventado.
+    campos que no se pudieron leer quedan como cadena vacia: es preferible un
+    campo vacio, que se detecta a simple vista, a uno con un valor inventado.
+
+    Con ``corregir_ocr`` activo se reparan en los RUT las confusiones tipicas de
+    digitos, usando el digito verificador como confirmacion. Solo tiene sentido
+    cuando el texto viene de un reconocimiento optico.
     """
     return {
         # -- Vehiculo --
@@ -215,7 +234,7 @@ def extraer_campos(texto: str) -> dict:
 
         # -- Arrendatario --
         "razon_social": _extraer(texto, _RAZON_SOCIAL, norma.canonizar_texto, "razon_social"),
-        "rut_empresa": extraer_rut_empresa(texto),
+        "rut_empresa": extraer_rut_empresa(texto, corregir_ocr),
         "giro": _extraer(texto, _GIRO, norma.canonizar_texto, "giro"),
         "domicilio": _extraer(texto, _DOMICILIO, norma.canonizar_texto, "domicilio"),
 
@@ -223,7 +242,7 @@ def extraer_campos(texto: str) -> dict:
         "nombre_representante": _extraer(
             texto, _NOMBRE_REPRESENTANTE, norma.canonizar_texto, "nombre_representante",
         ),
-        "rut_representante": extraer_rut_representante(texto),
+        "rut_representante": extraer_rut_representante(texto, corregir_ocr),
 
         # -- Condiciones economicas --
         "fecha_inicio": _extraer(texto, _FECHA_INICIO, norma.canonizar_fecha),

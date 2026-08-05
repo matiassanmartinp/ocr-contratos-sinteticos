@@ -120,11 +120,16 @@ def generar_lote(
 
         rutas_escaneos: list[Path] = []
         if not solo_pdf:
+            # El ruido del escaneo usa su PROPIO generador aleatorio, derivado de
+            # la semilla y del indice del documento. Asi el mismo lote produce los
+            # mismos contratos con cualquier perfil, y comparar limpio contra
+            # degradado mide el efecto de la degradacion y no el de haber sorteado
+            # otros datos.
             rutas_escaneos = escaneo.simular_escaneo(
                 ruta_pdf,
                 directorio_escaneos,
                 perfil_documento,
-                aleatorio,
+                Random(semilla * 1_000_003 + indice),
                 id_documento,
             )
 

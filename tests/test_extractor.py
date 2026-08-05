@@ -36,10 +36,10 @@ def test_se_extrae_un_registro_por_pdf(lote_extraido):
     assert len(obtenidos) == len(esperados) == CANTIDAD
 
 
-def test_el_metodo_usado_es_texto_nativo(lote_extraido):
+def test_el_motor_usado_es_el_texto_nativo(lote_extraido):
     _, obtenidos = lote_extraido
     for registro in obtenidos.values():
-        assert registro["metodo"] == cfg.METODO_TEXTO_NATIVO
+        assert registro["metodo"] == cfg.MOTOR_NATIVO
 
 
 def test_todos_los_campos_del_esquema_estan_presentes(lote_extraido):

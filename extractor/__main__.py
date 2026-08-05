@@ -26,7 +26,13 @@ def construir_analizador() -> argparse.ArgumentParser:
     analizador.add_argument(
         "--entrada", type=Path,
         default=cfg.DIRECTORIO_SALIDAS / cfg.SUBDIRECTORIO_PDF,
-        help="Directorio con los PDF, o la ruta de un PDF suelto "
+        help="Directorio con los documentos, o la ruta de uno suelto. Acepta PDF "
+             "e imagenes escaneadas (por defecto: %(default)s).",
+    )
+    analizador.add_argument(
+        "--motor", default=cfg.MOTOR_POR_DEFECTO, choices=cfg.MOTORES_DISPONIBLES,
+        help="Motor de lectura. 'auto' usa el texto embebido si lo hay y cae a "
+             "Tesseract si no; 'documentai' requiere credenciales de Google Cloud "
              "(por defecto: %(default)s).",
     )
     analizador.add_argument(
@@ -42,9 +48,9 @@ def main(argumentos: list[str] | None = None) -> int:
     opciones = construir_analizador().parse_args(argumentos)
 
     if opciones.entrada.is_file():
-        registros = [extraer_de_pdf(opciones.entrada)]
+        registros = [extraer_de_pdf(opciones.entrada, motor=opciones.motor)]
     else:
-        registros = extraer_de_directorio(opciones.entrada)
+        registros = extraer_de_directorio(opciones.entrada, motor=opciones.motor)
 
     if not registros:
         print(f"No se encontro ningun PDF en {opciones.entrada}.")
@@ -61,7 +67,9 @@ def main(argumentos: list[str] | None = None) -> int:
     total_campos = sum(len(registro["campos"]) for registro in registros)
     metodos = Counter(registro["metodo"] for registro in registros)
 
-    print(f"Procesados {len(registros)} documento(s).")
+    segundos = sum(registro["segundos"] for registro in registros)
+    print(f"Procesados {len(registros)} documento(s) en {segundos:.1f} s "
+          f"({segundos / len(registros):.2f} s por documento).")
     print(f"  metodos:      {dict(metodos)}")
     print(f"  campos vacios: {vacios} de {total_campos}")
     print(f"  predicciones:  {ruta_salida}")
