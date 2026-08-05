@@ -2,11 +2,17 @@
 
 Extrae los quince campos del contrato y los devuelve en su forma **canónica**.
 
-> **Estado:** la vía de texto embebido está implementada y medida. La vía OCR,
-> para los documentos escaneados, es lo que sigue.
+Funciona con tres vías de lectura tras una misma interfaz: texto embebido del PDF,
+Tesseract en local y Google Cloud Document AI. `campos.py` recibe una cadena y no
+sabe de cuál vino, que es lo que permite comparar motores sobre documentos
+idénticos.
 
 ```bash
-python -m extractor --entrada salidas/pdf
+python -m extractor --entrada salidas/pdf --motor nativo
+```
+
+```bash
+python -m extractor --entrada salidas/escaneos --motor tesseract
 ```
 
 Escribe `salidas/predicciones.jsonl`, una línea por documento, con los campos y
@@ -56,21 +62,48 @@ permite distinguirla del RUT de la empresa.
 verificador** de cada RUT. Es la comprobación más barata del extractor y la que
 mejor paga: convierte un error silencioso en una omisión visible.
 
-## Resultado sobre texto nativo
+### El techo de la lógica de parseo
 
-100,0% de exactitud por campo y por documento, sobre 200 contratos generados con
-una semilla distinta de la usada para escribir los patrones (3.000 campos, cero
-errores, cero omisiones, cero confusiones con la arrendadora).
+El 100% sobre texto nativo se sostiene también con una semilla distinta de la usada
+para escribir los patrones: 200 contratos, 3.000 campos, cero errores, cero
+omisiones, cero confusiones con la arrendadora.
 
-Ese número es el **techo de la lógica de parseo**, no el rendimiento del sistema:
-mide los patrones sobre texto limpio, sin ruido de OCR. Sirve como línea base
-contra la cual comparar la vía OCR, para poder atribuir cada punto perdido a su
-causa real.
+Ese número no es el rendimiento del sistema, es su **techo**: mide los patrones sin
+ruido de OCR de por medio. Sirve para atribuir cada punto perdido a su causa real,
+y lo que dice es que el margen de mejora no está en las regex sino en la calidad
+del escaneo.
 
-## Lo que sigue
+## La vía OCR
 
-`ocr.py`, con la misma interfaz que `texto.py`: rasterizar la imagen escaneada,
-preprocesarla y pasarla por Tesseract en español. Ahí es donde
-`canonizar_rut_leido(corregir_ocr=True)` empieza a ganarse el sueldo, corrigiendo
-las confusiones típicas de dígitos con la validación del dígito verificador como
-red de seguridad.
+`ocr.py` despacha entre los dos motores y devuelve texto plano en ambos casos.
+
+**Tesseract.** Antes de reconocer, `preproceso.py` endereza la página por el método
+del perfil de proyección, aplana la iluminación dividiendo por su propio fondo,
+quita las motas con un filtro de mediana **solo si la página las tiene** —sobre un
+escaneo limpio el filtro adelgaza los trazos y perjudica— y binariza con el umbral
+de Otsu. El orden importa tanto como los pasos: las motas se quitan a resolución
+nativa, porque ampliar primero convierte cada una en un bloque que la mediana ya no
+puede borrar. Sin ese preproceso el perfil degradado cae de 31% a 3%.
+
+**Document AI.** Recibe el documento tal cual, sin preproceso local: el servicio
+aplica su propio realce y adelantarse suele empeorar el resultado. Las credenciales
+se leen del entorno y no existen en el repositorio.
+
+Sobre texto reconocido se activa `corregir_ocr=True`, que repara las confusiones
+típicas de dígitos en los RUT —la O por un cero, la ele por un uno— usando el
+dígito verificador como confirmación. Si aun así no cuadra, el campo se omite en
+vez de devolverse mal.
+
+## Resultados
+
+| Entrada | Exactitud por campo | Documentos perfectos |
+|---|---|---|
+| Texto nativo | 100,0% | 100,0% |
+| Escaneo limpio (Tesseract) | 94,4% | 46,7% |
+| Escaneo medio (Tesseract) | 80,7% | 0,0% |
+| Escaneo degradado (Tesseract) | 31,1% | 0,0% |
+
+Document AI no tiene fila porque medirlo requiere una cuenta con facturación
+activa. La construcción de su petición sí se ejercita contra la biblioteca real en
+las pruebas; lo que no está cubierto es la llamada de red. Ver la sección
+correspondiente en el [README principal](../README.md#los-dos-motores-de-ocr).

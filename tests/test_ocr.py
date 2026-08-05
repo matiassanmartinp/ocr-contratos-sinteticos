@@ -24,6 +24,15 @@ necesita_tesseract = pytest.mark.skipif(
 )
 
 
+def _tiene_sdk_google() -> bool:
+    """Indica si la dependencia opcional de Google Cloud esta instalada."""
+    try:
+        from google.cloud import documentai  # noqa: F401
+    except ImportError:
+        return False
+    return True
+
+
 def _pagina_de_prueba(inclinacion: float = 0.0, vineteado: float = 0.0,
                       motas: float = 0.0, semilla: int = 0) -> Image.Image:
     """Fabrica una pagina blanca con renglones negros y la degrada a pedido."""
@@ -252,6 +261,52 @@ def test_con_ambas_variables_document_ai_se_declara_configurado(monkeypatch):
     monkeypatch.setattr(cfg, "DOCAI_PROCESADOR", "projects/x/locations/us/processors/y")
     monkeypatch.setattr(cfg, "DOCAI_CREDENCIALES", "/ruta/a/credenciales.json")
     assert ocr.documentai_esta_configurado()
+
+
+falta_sdk_google = pytest.mark.skipif(
+    not _tiene_sdk_google(),
+    reason="google-cloud-documentai no esta instalado (dependencia opcional)",
+)
+
+
+@falta_sdk_google
+def test_la_peticion_a_document_ai_se_arma_con_la_forma_correcta(tmp_path):
+    """Verifica todo lo que se puede verificar sin credenciales ni red.
+
+    Construir la peticion es la parte del camino de Document AI que no depende del
+    servicio. Ejercitarla contra la biblioteca real detecta un cambio de API o un
+    campo mal escrito, que es el modo tipico en que se rompe una integracion de
+    nube sin que nadie se entere hasta que falla en produccion.
+    """
+    registros = generar_lote(
+        cantidad=1, semilla=501, directorio_salidas=tmp_path, solo_pdf=True,
+    )
+    ruta_pdf = tmp_path / registros[0]["archivos"]["pdf"]
+    procesador = "projects/proyecto-de-prueba/locations/us/processors/abc123"
+
+    solicitud = ocr.construir_solicitud_docai(ruta_pdf, procesador=procesador)
+
+    assert solicitud.name == procesador
+    assert solicitud.raw_document.mime_type == "application/pdf"
+    assert solicitud.raw_document.content == ruta_pdf.read_bytes()
+    assert solicitud.process_options.ocr_config.enable_native_pdf_parsing is True
+
+
+@falta_sdk_google
+def test_document_ai_admite_tambien_imagenes_escaneadas(tmp_path):
+    ruta = tmp_path / "escaneo.jpg"
+    _pagina_de_prueba().save(ruta)
+
+    solicitud = ocr.construir_solicitud_docai(ruta, procesador="projects/x/y/z")
+    assert solicitud.raw_document.mime_type == "image/jpeg"
+
+
+def test_un_formato_no_admitido_falla_antes_de_gastar_una_llamada(tmp_path):
+    """Mejor rechazar en local que pagar una peticion para que la rechace el servicio."""
+    ruta = tmp_path / "documento.docx"
+    ruta.write_bytes(b"contenido")
+    with pytest.raises(ValueError, match="no admitido"):
+        ocr.tipo_mime_de(ruta)
 
 
 def test_el_repositorio_no_trae_credenciales_escritas():

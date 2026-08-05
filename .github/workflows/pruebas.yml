@@ -39,6 +39,13 @@ jobs:
           pip install -r requirements.txt
           pip install "ruff>=0.6"
 
+      # La dependencia de Google Cloud es opcional para usar el proyecto, pero en
+      # el CI se instala igual: sin ella las pruebas de Document AI se saltarian, y
+      # son justamente las que detectan un cambio de API en la biblioteca. No se
+      # contacta al servicio en ningun momento ni hacen falta credenciales.
+      - name: Instalar la dependencia opcional de Google Cloud
+        run: pip install -r requirements-opcional.txt
+
       - name: Revisar el codigo con ruff
         run: python -m ruff check .
 

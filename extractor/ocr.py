@@ -165,24 +165,30 @@ def _obtener_cliente_docai():
     return _CLIENTE_DOCAI
 
 
-def leer_con_document_ai(ruta: Path) -> str:
-    """Reconoce el texto de un documento con Google Cloud Document AI.
-
-    El documento se envia tal cual, sin preproceso local: el servicio hace su
-    propio enderezado y realce, y adelantarse suele empeorar el resultado.
-    """
-    from google.cloud import documentai  # importado ya validado por el cliente
-
-    cliente = _obtener_cliente_docai()
-    ruta = Path(ruta)
-    tipo_mime = _TIPOS_MIME.get(ruta.suffix.lower())
+def tipo_mime_de(ruta: Path) -> str:
+    """Devuelve el tipo MIME del documento, o falla si la extension no se admite."""
+    tipo_mime = _TIPOS_MIME.get(Path(ruta).suffix.lower())
     if tipo_mime is None:
-        raise ValueError(f"Tipo de archivo no admitido por Document AI: {ruta.suffix}")
+        raise ValueError(
+            f"Tipo de archivo no admitido por Document AI: {Path(ruta).suffix}"
+        )
+    return tipo_mime
 
-    solicitud = documentai.ProcessRequest(
-        name=cfg.DOCAI_PROCESADOR,
+
+def construir_solicitud_docai(ruta: Path, procesador: str | None = None):
+    """Arma la peticion a Document AI sin enviarla.
+
+    Se separa de :func:`leer_con_document_ai` a proposito: construir la peticion
+    es la parte que se puede verificar sin credenciales ni acceso a la red, y las
+    pruebas la ejercitan con un procesador ficticio. Lo unico que queda sin cubrir
+    es la llamada en si.
+    """
+    from google.cloud import documentai
+
+    return documentai.ProcessRequest(
+        name=procesador if procesador is not None else cfg.DOCAI_PROCESADOR,
         raw_document=documentai.RawDocument(
-            content=ruta.read_bytes(), mime_type=tipo_mime,
+            content=Path(ruta).read_bytes(), mime_type=tipo_mime_de(ruta),
         ),
         process_options=documentai.ProcessOptions(
             ocr_config=documentai.OcrConfig(
@@ -190,6 +196,18 @@ def leer_con_document_ai(ruta: Path) -> str:
             ),
         ),
     )
+
+
+def leer_con_document_ai(ruta: Path) -> str:
+    """Reconoce el texto de un documento con Google Cloud Document AI.
+
+    El documento se envia tal cual, sin preproceso local: el servicio hace su
+    propio enderezado y realce, y adelantarse suele empeorar el resultado. Esa es
+    la diferencia de fondo con la via de Tesseract, donde el preproceso local es
+    lo que mas pesa en el resultado.
+    """
+    cliente = _obtener_cliente_docai()
+    solicitud = construir_solicitud_docai(ruta)
 
     respuesta = cliente.process_document(
         request=solicitud, timeout=cfg.DOCAI_TIMEOUT_SEGUNDOS,

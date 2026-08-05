@@ -8,6 +8,12 @@
 Extraer automáticamente quince campos de contratos de arriendo vehicular
 escaneados, y **medir** qué tan bien se extraen.
 
+El extractor lee por OCR y funciona con **dos motores intercambiables**: Tesseract
+en local y Google Cloud Document AI. Ninguno de los dos está cableado al resto del
+código — las reglas de extracción reciben texto plano y no saben de dónde vino —,
+que es justamente lo que permite comparar ambos sobre los mismos documentos y
+decidir con datos si el motor de pago se justifica.
+
 El problema es real; los datos, no. El repositorio genera su propio dataset
 sintético, así que se puede clonar, reproducir el dataset completo con una semilla
 y evaluar el extractor sin que exista un solo documento real de por medio.
@@ -18,7 +24,8 @@ y evaluar el extractor sin que exista un solo documento real de por medio.
 dónde caen, cómo se rotulan y en qué formato se imprimen. Eso es justamente lo que
 impide extraerlos por posición.*
 
-**Cinco minutos de lectura:** el [resultado](#resultado) y por qué el dataset es
+**Cinco minutos de lectura:** el [resultado](#resultado), [los dos motores de
+OCR](#los-dos-motores-de-ocr) y por qué el dataset es
 [sintético](#por-qué-el-dataset-es-sintético). **Para ejecutarlo:**
 [instalación](#instalación) y [uso](#uso). **Para revisar el código:**
 [cómo funciona el extractor](extractor/README.md) y [cómo se
@@ -39,6 +46,10 @@ pareada.
 | Escaneo limpio (Tesseract) | 94,4% | 46,7% | 2,2% | 3,3% | 2,4 |
 | Escaneo medio (Tesseract) | 80,7% | 0,0% | 7,3% | 12,0% | 1,9 |
 | Escaneo degradado (Tesseract) | 31,1% | 0,0% | 11,1% | 57,8% | 2,0 |
+
+Las cifras de OCR son de Tesseract, no de Document AI. La razón está en [los dos
+motores](#los-dos-motores-de-ocr): publicar un número que no medí sería peor que
+no publicarlo.
 
 Tres cosas que dice esta tabla y que no se ven en un promedio global:
 
@@ -89,6 +100,78 @@ python -m extractor --entrada salidas/escaneos --motor tesseract
 ```bash
 python -m evaluacion --etiqueta "OCR medio"
 ```
+
+---
+
+## Los dos motores de OCR
+
+El extractor obtiene el texto por una de tres vías y aplica las mismas reglas de
+extracción a todas. `campos.py` recibe una cadena y no sabe si vino del PDF, de
+Tesseract o de la nube; esa indiferencia es una decisión de diseño, no una
+casualidad, y es lo que hace posible medir un motor contra otro sobre documentos
+idénticos.
+
+| Motor | Qué es | Credenciales | Costo |
+|---|---|---|---|
+| `nativo` | Texto embebido del PDF, sin OCR | no | gratis |
+| `tesseract` | OCR local | no | gratis |
+| `documentai` | Google Cloud Document AI | sí | por página |
+
+**Por qué los dos y no solo el de producción.** El proceso real corre sobre
+Document AI. Si esa fuera la única vía, nadie podría clonar este repositorio y
+verificar nada: haría falta una cuenta de Google Cloud, un procesador creado y
+facturación activa. Tesseract existe para que el proyecto sea ejecutable y las
+cifras publicadas, reproducibles por cualquiera.
+
+**En qué se diferencian, más allá del precio.** Con Tesseract el preproceso local
+—enderezar, aplanar la iluminación, quitar las motas— es lo que más pesa en el
+resultado, y por eso el extractor lo hace antes de reconocer. Document AI aplica su
+propio realce sobre el documento original, así que se le envía tal cual: adelantarse
+con un preproceso local suele empeorar lo que el servicio habría hecho mejor solo.
+
+### Qué está medido y qué no
+
+Las cuatro filas de la tabla de resultados son mediciones reales sobre este
+dataset. **Document AI no tiene fila**, y conviene decir por qué en vez de dejar el
+hueco sin explicar: medirlo exige una cuenta con facturación activa, y no la tengo.
+Un número inventado, o copiado de un benchmark ajeno, valdría menos que la
+ausencia.
+
+Lo que sí está cubierto de esa integración:
+
+- La construcción de la petición se ejercita **contra la biblioteca real de Google**
+  en las pruebas, con un procesador ficticio. Eso detecta un cambio de API o un
+  campo mal escrito, que es el modo típico en que una integración de nube se
+  rompe sin que nadie se entere hasta producción.
+- Un formato de archivo no admitido se rechaza en local, antes de gastar una
+  llamada facturada.
+- La falta de credenciales produce un mensaje que dice qué variable falta, en vez
+  de una excepción de la biblioteca.
+
+Lo que no está cubierto es la llamada de red en sí, y por lo tanto la calidad de
+su reconocimiento sobre estos documentos.
+
+### Completar la tabla
+
+Con credenciales configuradas, agregar la fila que falta son tres comandos —
+el arnés de evaluación no distingue entre motores:
+
+```bash
+python -m generador --cantidad 30 --semilla 2026 --perfil medio
+```
+
+```bash
+python -m extractor --entrada salidas/escaneos --motor documentai
+```
+
+```bash
+python -m evaluacion --etiqueta "Document AI, perfil medio"
+```
+
+La comparación es directa: mismo dataset, misma semilla, mismas métricas. Esa es la
+pregunta que un equipo se hace antes de aprobar el gasto recurrente de un servicio
+de nube, y el proyecto está armado para responderla con datos en vez de con
+intuición.
 
 ---
 
@@ -151,10 +234,14 @@ tesseract --list-langs
 Debe aparecer `spa`. Si el binario no está en el `PATH`, indicar su ruta en la
 variable de entorno `TESSERACT_EXE` (ver [`.env.example`](.env.example)).
 
-### Google Document AI (opcional)
+### Google Document AI
 
-El proceso real usa Document AI. El repositorio trae la integración, pero **no
-contiene ninguna credencial**: todo se lee del entorno.
+Es el motor que corre en el proceso real. Su biblioteca se instala aparte para no
+imponer el SDK de Google Cloud a quien solo quiera ejecutar el proyecto en local,
+pero la integración es parte del diseño y no un agregado — ver [los dos
+motores](#los-dos-motores-de-ocr).
+
+El repositorio **no contiene ninguna credencial**: todo se lee del entorno.
 
 ```bash
 pip install -r requirements-opcional.txt
@@ -165,9 +252,16 @@ cp .env.example .env
 ```
 
 Completar en `.env` la ruta al JSON de la cuenta de servicio y el nombre de
-recurso del procesador. El archivo `.env` y cualquier JSON de credenciales están
-excluidos en el [`.gitignore`](.gitignore). Sin estas variables el proyecto
-funciona igual con Tesseract; solo se desactiva `--motor documentai`.
+recurso del procesador, que se obtiene en la consola de Google Cloud en
+*Document AI > Procesadores*.
+
+El archivo `.env` y cualquier JSON de cuenta de servicio están excluidos en el
+[`.gitignore`](.gitignore) con patrones explícitos: el riesgo real no es escribir
+una clave en el código, es que el JSON descargado termine en la carpeta del
+proyecto.
+
+Sin estas variables todo lo demás funciona igual; solo se desactiva
+`--motor documentai`.
 
 ## Uso
 
@@ -200,6 +294,10 @@ python -m extractor --entrada salidas/escaneos --motor tesseract
 | `nativo` | Solo texto embebido, sin OCR. Es el techo de la lógica de parseo |
 | `tesseract` | OCR local. No necesita credenciales |
 | `documentai` | Google Cloud Document AI. Requiere credenciales en el entorno |
+
+`auto` prefiere el texto embebido cuando existe: reconocer por OCR lo que ya venía
+escrito en el archivo es perder precisión y tiempo a la vez. Detalle de cada uno en
+[los dos motores de OCR](#los-dos-motores-de-ocr).
 
 Resultado en `salidas/`:
 
@@ -306,9 +404,11 @@ nunca se devuelvan los datos de la contraparte fija, que el enderezado recupere 
 ángulo con que se torció la página, y que la evaluación cuente por separado errores
 y omisiones.
 
-Las pruebas de OCR se saltan solas si Tesseract no está instalado. Las de Document
-AI nunca contactan al servicio: solo comprueban que la falta de credenciales se
-informe con un mensaje útil.
+Las pruebas de OCR se saltan solas si Tesseract no está instalado, y las de
+Document AI si su biblioteca no lo está. **Ninguna contacta al servicio de Google**:
+verifican que la petición se arme con la forma correcta contra la biblioteca real,
+que un formato no admitido se rechace antes de gastar una llamada facturada, y que
+la falta de credenciales produzca un mensaje que diga qué variable falta.
 
 El [CI](.github/workflows/pruebas.yml) corre todo en Python 3.11, 3.12 y 3.13, con
 Tesseract instalado, y además verifica el flujo completo de extremo a extremo y que
